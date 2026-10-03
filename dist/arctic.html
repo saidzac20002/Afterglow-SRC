@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Afterglow Browser</title>
+  <style>*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#08090d}iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#08090d}</style>
+</head>
+<body>
+  <iframe id="arcticFrame" allow="fullscreen; clipboard-read; clipboard-write" title="Afterglow private browser"></iframe>
+  <script>
+    (() => {
+      const marker = "arctic-root"
+      const target = new URLSearchParams(location.search).get("target") || ""
+      const sources = atob("aHR0cHM6Ly9jZG4uanNkZWxpdnIubmV0L2doL3NlYWxpZWUxMS9hcmN0aWNAbWFpbi9pbmRleC5odG1sfGh0dHBzOi8vdGVzdGluZ2NmLmpzZGVsaXZyLm5ldC9naC9zZWFsaWVlMTEvYXJjdGljQG1haW4vaW5kZXguaHRtbHxodHRwczovL2djb3JlLmpzZGVsaXZyLm5ldC9naC9zZWFsaWVlMTEvYXJjdGljQG1haW4vaW5kZXguaHRtbHxodHRwczovL3Jhdy5naXRodWJ1c2VyY29udGVudC5jb20vc2VhbGllZTExL2FyY3RpYy9tYWluL2luZGV4Lmh0bWx8aHR0cHM6Ly9jZG4uc3RhdGljYWxseS5pby9naC9zZWFsaWVlMTEvYXJjdGljQG1haW4vaW5kZXguaHRtbA==").split("|").map(url => url + "?d=" + Date.now())
+      const frame = document.getElementById("arcticFrame")
+      const blocked = /(profitableratecpmnetwork|googletagmanager|google-analytics|googlesyndication|doubleclick|adservice)/i
+
+      function prepare(html, source) {
+        const doc = new DOMParser().parseFromString(html, "text/html")
+        doc.querySelectorAll("script[src],link[href],iframe[src]").forEach(node => {
+          const url = node.getAttribute("src") || node.getAttribute("href") || ""
+          if (blocked.test(url)) node.remove()
+        })
+        doc.querySelectorAll("script:not([src])").forEach(node => {
+          if (/gtag\s*\(|dataLayer|adsbygoogle/i.test(node.textContent)) node.remove()
+        })
+        const base = doc.createElement("base")
+        base.href = new URL(".", source).href
+        doc.head.prepend(base)
+        const style = doc.createElement("style")
+        style.textContent = `
+          :root,:root[data-palette]{--bg-base:#08090d!important;--bg-deep:#08090d!important;--surface:#111218!important;--surface-raised:#17181f!important;--surface-sunken:#0c0d11!important;--surface-hover:#191a21!important;--border:#282a32!important;--border-strong:#484a54!important;--text:#f4f2ed!important;--text-muted:#9899a1!important;--text-faint:#70717a!important;--accent:#d8ff5f!important;--accent-soft:rgba(216,255,95,.1)!important;--accent-text:#10110d!important;color-scheme:dark!important}
+          html,body,#arctic-root,.arctic-shell{background:#08090d!important}.arctic-arctic{display:none!important}.arctic-shell{grid-template-columns:minmax(0,1fr)!important}.arctic-main{grid-column:1!important;grid-row:1!important}.arctic-surface{border-radius:0!important}body:after,.snow-layer,.snow-canvas{display:none!important}
+        `
+        doc.head.append(style)
+        const boot = doc.createElement("script")
+        boot.textContent = `
+          location.hash = "#/browser";
+          (() => {
+            const target = ${JSON.stringify(target)};
+            if (!target) return;
+            const started = Date.now();
+            const open = () => {
+              const input = document.querySelector(".ax-address__input");
+              if (input) {
+                const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+                setter.call(input, target);
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+                input.dispatchEvent(new Event("change", { bubbles: true }));
+                input.focus();
+                input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true }));
+                return;
+              }
+              if (Date.now() - started < 20000) setTimeout(open, 250);
+            };
+            setTimeout(open, 300);
+          })();
+        `
+        doc.body.append(boot)
+        return "<!doctype html>" + doc.documentElement.outerHTML
+      }
+
+      function load() {
+        const source = sources.shift()
+        if (!source) { document.body.textContent = "Could not load the private browser."; return }
+        fetch(source, { cache: "no-store" }).then(response => {
+          if (!response.ok) throw new Error()
+          return response.text()
+        }).then(html => {
+          if (!html.includes(marker)) throw new Error()
+          frame.srcdoc = prepare(html, source)
+        }).catch(load)
+      }
+      load()
+    })()
+  </script>
+</body>
+</html>

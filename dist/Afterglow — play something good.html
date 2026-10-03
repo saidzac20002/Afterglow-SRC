@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<!-- saved from url=(0057)https://unpkg.com/dogmans-afterglow@2.0.0/dist/index.html -->
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#08090d">
+  <title>Afterglow — play something good</title>
+  <style>
+    :root {
+      --bg: #08090d;
+      --panel: #111218;
+      --panel2: #17181f;
+      --line: #282a32;
+      --text: #f4f2ed;
+      --muted: #9899a1;
+      --lime: #d8ff5f;
+      --purple: #aa8cff;
+      --orange: #ff9168;
+      --radius: 18px
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html {
+      scroll-behavior: smooth
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh
+    }
+
+    button,
+    input {
+      font: inherit
+    }
+
+    button {
+      color: inherit
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .035;
+      z-index: 20;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E")
+    }
+
+    header {
+      height: 76px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      padding: 0 4vw;
+      position: sticky;
+      top: 0;
+      background: rgba(8, 9, 13, .86);
+      backdrop-filter: blur(18px);
+      z-index: 10
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-weight: 800;
+      letter-spacing: -.04em;
+      font-size: 20px
+    }
+
+    .mark {
+      width: 30px;
+      height: 30px;
+      border: 1px solid #b6dd42;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: var(--lime);
+      color: #111;
+      box-shadow: 0 0 26px rgba(216, 255, 95, .18)
+    }
+
+    .mark svg {
+      width: 17px
+    }
+
+    .nav {
+      display: flex;
+      gap: 28px;
+      margin-left: 54px
+    }
+
+    .nav button {
+      background: none;
+      border: 0;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 8px
+    }
+
+    .nav button.active,
+    .nav button:hover {
+      color: var(--text)
+    }
+
+    .status {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #60616a
+    }
+
+    .dot.live {
+      background: var(--lime);
+      box-shadow: 0 0 12px var(--lime)
+    }
+
+    main {
+      max-width: 1500px;
+      margin: auto;
+      padding: 34px 4vw 60px
+    }
+
+    .hero {
+      position: relative;
+      min-height: 360px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      overflow: hidden;
+      background: radial-gradient(circle at 77% 25%, rgba(170, 140, 255, .18), transparent 30%), radial-gradient(circle at 88% 85%, rgba(216, 255, 95, .1), transparent 28%), #101116;
+      padding: 50px;
+      display: flex;
+      align-items: center
+    }
+
+    .hero:after {
+      content: "";
+      position: absolute;
+      width: 350px;
+      height: 350px;
+      right: 7%;
+      top: 1%;
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 48% 52% 62% 38%;
+      transform: rotate(16deg);
+      box-shadow: 0 0 0 55px rgba(255, 255, 255, .018), 0 0 0 110px rgba(255, 255, 255, .012)
+    }
+
+    .eyebrow {
+      font-size: 11px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--lime);
+      font-weight: 800;
+      margin-bottom: 14px
+    }
+
+    .hero h1 {
+      font-size: clamp(43px, 6vw, 88px);
+      line-height: .92;
+      letter-spacing: -.065em;
+      margin: 0;
+      max-width: 770px;
+      position: relative;
+      z-index: 1
+    }
+
+    .hero h1 em {
+      font-family: Georgia, serif;
+      font-weight: 400;
+      color: var(--purple)
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 16px;
+      max-width: 520px;
+      line-height: 1.6;
+      margin: 24px 0 0
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 28px
+    }
+
+    .primary,
+    .secondary {
+      border: 0;
+      border-radius: 11px;
+      padding: 13px 18px;
+      font-weight: 750;
+      cursor: pointer;
+      transition: .2s
+    }
+
+    .primary {
+      background: var(--lime);
+      color: #10110d
+    }
+
+    .primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(216, 255, 95, .15)
+    }
+
+    .secondary {
+      border: 1px solid var(--line);
+      background: #191a21
+    }
+
+    .secondary:hover {
+      border-color: #555863
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: end;
+      gap: 18px;
+      margin: 42px 0 18px
+    }
+
+    .titleblock {
+      margin-right: auto
+    }
+
+    .titleblock h2 {
+      font-size: 28px;
+      letter-spacing: -.04em;
+      margin: 0 0 6px
+    }
+
+    .titleblock p {
+      color: var(--muted);
+      margin: 0;
+      font-size: 13px
+    }
+
+    .search-wrap {
+      position: relative;
+      width: min(360px, 34vw)
+    }
+
+    .search-wrap svg {
+      position: absolute;
+      width: 17px;
+      left: 14px;
+      top: 14px;
+      color: var(--muted)
+    }
+
+    #search {
+      width: 100%;
+      height: 45px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--text);
+      padding: 0 42px;
+      outline: 0
+    }
+
+    #search:focus {
+      border-color: #6e705e;
+      box-shadow: 0 0 0 3px rgba(216, 255, 95, .06)
+    }
+
+    .shortcut {
+      position: absolute;
+      right: 11px;
+      top: 11px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 3px 6px;
+      color: #70717a;
+      font-size: 10px
+    }
+
+    .categories {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 0 20px;
+      scrollbar-width: none
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 99px;
+      padding: 8px 14px;
+      font-size: 12px;
+      white-space: nowrap;
+      cursor: pointer
+    }
+
+    .chip:hover,
+    .chip.active {
+      background: var(--text);
+      border-color: var(--text);
+      color: #111
+    }
+
+    .games {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px
+    }
+
+    .card {
+      aspect-ratio: 4/5;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--panel);
+      position: relative;
+      border: 1px solid transparent;
+      cursor: pointer;
+      animation: rise .35s both
+    }
+
+    .card:hover {
+      border-color: #484a54
+    }
+
+    .card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform .45s
+    }
+
+    .card:hover img {
+      transform: scale(1.045)
+    }
+
+    .card:after {
+      content: "";
+      position: absolute;
+      inset: 30% 0 0;
+      background: linear-gradient(transparent, rgba(4, 5, 8, .95))
+    }
+
+    .card-info {
+      position: absolute;
+      z-index: 1;
+      left: 15px;
+      right: 15px;
+      bottom: 14px
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 750;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .card-meta {
+      font-size: 10px;
+      color: #c5c5c8;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-top: 5px
+    }
+
+    .play {
+      position: absolute;
+      z-index: 2;
+      right: 13px;
+      top: 13px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      border: 0;
+      background: rgba(8, 9, 13, .78);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      transform: scale(.85);
+      transition: .2s;
+      cursor: pointer
+    }
+
+    .card:hover .play {
+      opacity: 1;
+      transform: scale(1)
+    }
+
+    .skeleton {
+      background: linear-gradient(100deg, #14151b 30%, #202129 50%, #14151b 70%);
+      background-size: 300%;
+      animation: shimmer 1.4s infinite
+    }
+
+    .empty {
+      grid-column: 1/-1;
+      text-align: center;
+      border: 1px dashed var(--line);
+      border-radius: 18px;
+      padding: 70px;
+      color: var(--muted)
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 9px;
+      margin: 28px 0
+    }
+
+    .pagebtn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 9px;
+      padding: 9px 13px;
+      cursor: pointer
+    }
+
+    .pagebtn:disabled {
+      opacity: .3;
+      cursor: default
+    }
+
+    .pagecount {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 0 8px
+    }
+
+    .favorite {
+      position: absolute;
+      z-index: 3;
+      left: 13px;
+      top: 13px;
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 50%;
+      background: rgba(8, 9, 13, .78);
+      backdrop-filter: blur(8px);
+      color: #b8b8bf;
+      font-size: 17px;
+      cursor: pointer;
+      transition: .2s
+    }
+
+    .favorite:hover {
+      color: var(--text);
+      transform: scale(1.06)
+    }
+
+    .favorite.active {
+      color: #111;
+      background: var(--lime);
+      border-color: var(--lime);
+      box-shadow: 0 8px 28px rgba(216, 255, 95, .2)
+    }
+
+    .card.is-favorite {
+      border-color: rgba(216, 255, 95, .38)
+    }
+
+    .ai-button {
+      position: fixed;
+      right: 28px;
+      bottom: 28px;
+      z-index: 11;
+      border: 0;
+      border-radius: 99px;
+      background: var(--purple);
+      color: #100d17;
+      font-weight: 800;
+      padding: 14px 20px;
+      box-shadow: 0 12px 50px rgba(170, 140, 255, .25);
+      cursor: pointer
+    }
+
+    .ai-button span {
+      margin-right: 8px
+    }
+
+    .ai {
+      position: fixed;
+      z-index: 12;
+      right: 26px;
+      bottom: 26px;
+      width: min(390px, calc(100vw - 28px));
+      height: 570px;
+      max-height: calc(100vh - 40px);
+      background: #121319;
+      border: 1px solid #333540;
+      border-radius: 22px;
+      box-shadow: 0 26px 80px rgba(0, 0, 0, .55);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(20px) scale(.98);
+      opacity: 0;
+      pointer-events: none;
+      transition: .25s
+    }
+
+    .ai.open {
+      transform: none;
+      opacity: 1;
+      pointer-events: auto
+    }
+
+    .ai-head {
+      padding: 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .ai-avatar {
+      width: 35px;
+      height: 35px;
+      border-radius: 11px;
+      background: var(--purple);
+      color: #191222;
+      display: grid;
+      place-items: center;
+      font-weight: 900
+    }
+
+    .ai-name {
+      font-weight: 750;
+      font-size: 14px
+    }
+
+    .ai-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px
+    }
+
+    .close {
+      margin-left: auto;
+      background: transparent;
+      border: 0;
+      color: var(--muted);
+      font-size: 24px;
+      cursor: pointer
+    }
+
+    .messages {
+      flex: 1;
+      overflow: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 13px
+    }
+
+    .message {
+      font-size: 13px;
+      line-height: 1.5;
+      max-width: 88%;
+      padding: 11px 13px;
+      border-radius: 14px;
+      background: #1d1e26;
+      color: #d9d8dc
+    }
+
+    .message.bot {
+      border-bottom-left-radius: 4px
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--lime);
+      color: #15160f;
+      border-bottom-right-radius: 4px
+    }
+
+    .suggestions {
+      display: flex;
+      gap: 7px;
+      overflow: auto;
+      padding: 0 18px 12px;
+      scrollbar-width: none
+    }
+
+    .suggestion {
+      font-size: 11px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      background: transparent;
+      white-space: nowrap;
+      cursor: pointer;
+      color: #b8b8bf
+    }
+
+    .ai-input {
+      display: flex;
+      gap: 8px;
+      padding: 13px;
+      border-top: 1px solid var(--line)
+    }
+
+    #aiPrompt {
+      flex: 1;
+      background: #0c0d11;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      padding: 11px 12px;
+      outline: 0
+    }
+
+    .send {
+      border: 0;
+      background: var(--purple);
+      border-radius: 10px;
+      width: 42px;
+      cursor: pointer;
+      font-weight: 900
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 25px;
+      z-index: 30;
+      transform: translate(-50%, 20px);
+      background: #f0eee8;
+      color: #111;
+      padding: 11px 16px;
+      border-radius: 10px;
+      font-size: 12px;
+      opacity: 0;
+      transition: .2s;
+      pointer-events: none
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0)
+    }
+
+    .proxy {
+      position: fixed;
+      inset: 12px;
+      z-index: 40;
+      display: grid;
+      grid-template-rows: 58px minmax(0, 1fr);
+      overflow: hidden;
+      background: var(--bg);
+      border: 1px solid #333540;
+      border-radius: 22px;
+      box-shadow: 0 30px 100px rgba(0, 0, 0, .7);
+      opacity: 0;
+      transform: translateY(18px) scale(.985);
+      visibility: hidden;
+      pointer-events: none;
+      transition: .24s
+    }
+
+    .proxy.open {
+      opacity: 1;
+      transform: none;
+      visibility: visible;
+      pointer-events: auto
+    }
+
+    .proxy-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      background: rgba(17, 18, 24, .96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(18px)
+    }
+
+    .proxy-brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 800;
+      letter-spacing: -.035em
+    }
+
+    .proxy-mark {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 9px;
+      background: var(--lime);
+      color: #111;
+      font-weight: 900
+    }
+
+    .proxy-label {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .1em;
+      text-transform: uppercase
+    }
+
+    .proxy-spacer {
+      flex: 1
+    }
+
+    .proxy-secure {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 11px
+    }
+
+    .proxy-secure:before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--lime);
+      box-shadow: 0 0 12px var(--lime)
+    }
+
+    .proxy-close {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #191a21;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 20px
+    }
+
+    .proxy-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #08090d
+    }
+
+    .proxy-note {
+      display: none
+    }
+
+    .proxy-error .proxy-frame {
+      display: none
+    }
+
+    .proxy-error .proxy-note {
+      display: grid;
+      place-items: center;
+      padding: 30px;
+      text-align: center;
+      color: var(--muted)
+    }
+
+    .proxy-note strong {
+      display: block;
+      color: var(--text);
+      font-size: 18px;
+      margin-bottom: 8px
+    }
+
+    .proxy-stage {
+      position: relative;
+      min-height: 0
+    }
+
+    .proxy-loader {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 50% 42%, rgba(170, 140, 255, .13), transparent 28%), #08090d;
+      transition: opacity .45s, visibility .45s
+    }
+
+    .proxy-loader.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none
+    }
+
+    .proxy-loader-inner {
+      display: grid;
+      justify-items: center;
+      gap: 18px
+    }
+
+    .proxy-loader-mark {
+      position: relative;
+      width: 54px;
+      height: 54px;
+      border: 1px solid #282a32;
+      border-radius: 18px;
+      animation: proxy-turn 1.6s linear infinite
+    }
+
+    .proxy-loader-mark:after {
+      content: "";
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      left: 20px;
+      top: -6px;
+      border-radius: 4px;
+      background: var(--lime);
+      box-shadow: 0 0 20px rgba(216, 255, 95, .6)
+    }
+
+    .proxy-loader-title {
+      font-size: 13px;
+      font-weight: 750;
+      letter-spacing: -.01em
+    }
+
+    .proxy-loader-copy {
+      margin-top: -10px;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .14em;
+      text-transform: uppercase
+    }
+
+    @keyframes proxy-turn {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    @keyframes shimmer {
+      to {
+        background-position: -300%
+      }
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(8px)
+      }
+    }
+
+    @media(max-width:1100px) {
+      .games {
+        grid-template-columns: repeat(4, 1fr)
+      }
+    }
+
+    @media(max-width:760px) {
+      header {
+        height: 64px
+      }
+
+      .nav {
+        display: none
+      }
+
+      main {
+        padding: 18px 16px 50px
+      }
+
+      .hero {
+        min-height: 330px;
+        padding: 30px 24px
+      }
+
+      .hero h1 {
+        font-size: 49px
+      }
+
+      .hero p {
+        font-size: 14px
+      }
+
+      .toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        margin-top: 30px
+      }
+
+      .search-wrap {
+        width: 100%
+      }
+
+      .games {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px
+      }
+
+      .ai-button {
+        right: 16px;
+        bottom: 16px
+      }
+
+      .ai {
+        right: 14px;
+        bottom: 14px
+      }
+
+      .status span:last-child {
+        display: none
+      }
+
+      .proxy {
+        inset: 0;
+        border: 0;
+        border-radius: 0
+      }
+
+      .proxy-label,
+      .proxy-secure {
+        display: none
+      }
+    }
+
+    @media(max-width:380px) {
+      .hero h1 {
+        font-size: 40px
+      }
+
+      .hero-actions {
+        flex-direction: column
+      }
+    }
+
+    /* arctic AI behavior and states */
+    .ai {
+      width: min(430px, calc(100vw - 28px));
+      height: 620px
+    }
+
+    .ai-new {
+      margin-left: auto;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted);
+      padding: 7px 9px;
+      font-size: 11px;
+      cursor: pointer
+    }
+
+    .close {
+      margin-left: 0
+    }
+
+    .message {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere
+    }
+
+    .message.error {
+      color: #ff857d;
+      border: 1px solid rgba(255, 133, 125, .3)
+    }
+
+    .message details {
+      margin-bottom: 8px;
+      color: var(--muted)
+    }
+
+    .message summary {
+      cursor: pointer;
+      font-size: 11px
+    }
+
+    .typing {
+      display: flex;
+      gap: 4px;
+      padding: 4px
+    }
+
+    .typing i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: aiBlink 1.2s infinite
+    }
+
+    .typing i:nth-child(2) {
+      animation-delay: .15s
+    }
+
+    .typing i:nth-child(3) {
+      animation-delay: .3s
+    }
+
+    @keyframes aiBlink {
+
+      0%,
+      60%,
+      100% {
+        opacity: .25;
+        transform: none
+      }
+
+      30% {
+        opacity: 1;
+        transform: translateY(-3px)
+      }
+    }
+
+    #aiPrompt {
+      resize: none;
+      max-height: 130px
+    }
+
+    .send {
+      width: auto;
+      min-width: 52px;
+      padding: 0 10px;
+      color: #100d17
+    }
+
+    .send.stop {
+      background: #24252d;
+      color: var(--text);
+      border: 1px solid var(--line)
+    }
+
+    .send:disabled {
+      opacity: .5;
+      cursor: default
+    }
+  </style>
+  <script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag("js", new Date()); gtag("config", "G-L69H1VNZ27");</script>
+</head>
+
+<body>
+  <div class="noise"></div>
+  <header>
+    <div class="logo">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none">
+          <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.4"></path>
+        </svg></div>afterglow
+    </div>
+    <nav class="nav"><button class="active">Discover</button><button onclick="scrollToGames()">Browse</button><button
+        onclick="openProxy()">Browser</button><button onclick="openAI()">AI picks</button></nav>
+    <div class="status"><span class="dot live" id="dot"></span><span id="sdkStatus">Arcade online</span></div>
+  </header>
+  <main>
+    <section class="hero">
+      <div>
+        <div class="eyebrow">The instant arcade</div>
+        <h1>Play more.<br><em>Scroll less.</em></h1>
+        <p>Hundreds of hand-sized adventures, one click away, no waiting—just find your next obsession and press play.
+        </p>
+        <div class="hero-actions"><button class="primary" onclick="surpriseMe()">Surprise me ↗</button><button
+            class="secondary" onclick="openProxy()">Private browser</button><button class="secondary"
+            onclick="openAI()">Ask the game guide</button></div>
+      </div>
+    </section>
+    <section id="library">
+      <div class="toolbar">
+        <div class="titleblock">
+          <h2>Explore the arcade</h2>
+          <p id="resultText">1,169 games available</p>
+        </div>
+        <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"></circle>
+            <path d="m16 16 4 4" stroke="currentColor" stroke-width="2"></path>
+          </svg><input id="search" aria-label="Search games" placeholder="Search the arcade…"><span
+            class="shortcut">/</span></div>
+      </div>
+      <div class="categories" id="categories"><button class="chip active" data-cat="All">All</button></div>
+      <div class="games" id="games">
+        <article class="card" data-id="selenite/hollowknight" style="animation-delay:0ms"><img
+            src="./Afterglow — play something good_files/hollowknight" alt="Hollow Knight" loading="lazy"><button
+            class="play" aria-label="Play Hollow Knight">▶</button>
+          <div class="card-info">
+            <div class="card-title">Hollow Knight</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/bloonspp2" style="animation-delay:18ms"><img
+            src="./Afterglow — play something good_files/bloonspp2" alt="Bloons Player Pack 2" loading="lazy"><button
+            class="play" aria-label="Play Bloons Player Pack 2">▶</button>
+          <div class="card-info">
+            <div class="card-title">Bloons Player Pack 2</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/abudathealien" style="animation-delay:36ms"><img
+            src="./Afterglow — play something good_files/abudathealien" alt="Abuda The Alien" loading="lazy"><button
+            class="play" aria-label="Play Abuda The Alien">▶</button>
+          <div class="card-info">
+            <div class="card-title">Abuda The Alien</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/kindergarten2" style="animation-delay:54ms"><img
+            src="./Afterglow — play something good_files/kindergarten2" alt="Kindergarten 2" loading="lazy"><button
+            class="play" aria-label="Play Kindergarten 2">▶</button>
+          <div class="card-info">
+            <div class="card-title">Kindergarten 2</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/monsterbrawl" style="animation-delay:72ms"><img
+            src="./Afterglow — play something good_files/monsterbrawl" alt="Monster Brawl" loading="lazy"><button
+            class="play" aria-label="Play Monster Brawl">▶</button>
+          <div class="card-info">
+            <div class="card-title">Monster Brawl</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/3sonic" style="animation-delay:90ms"><img
+            src="./Afterglow — play something good_files/3sonic" alt="Sonic 3" loading="lazy"><button class="play"
+            aria-label="Play Sonic 3">▶</button>
+          <div class="card-info">
+            <div class="card-title">Sonic 3</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/gamemaker" style="animation-delay:108ms"><img
+            src="./Afterglow — play something good_files/gamemaker" alt="Game Maker Doodle" loading="lazy"><button
+            class="play" aria-label="Play Game Maker Doodle">▶</button>
+          <div class="card-info">
+            <div class="card-title">Game Maker Doodle</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/brick" style="animation-delay:126ms"><img
+            src="./Afterglow — play something good_files/brick" alt="Gunbrick" loading="lazy"><button class="play"
+            aria-label="Play Gunbrick">▶</button>
+          <div class="card-info">
+            <div class="card-title">Gunbrick</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/ddlc" style="animation-delay:144ms"><img
+            src="./Afterglow — play something good_files/ddlc" alt="Doki Doki Literature Club" loading="lazy"><button
+            class="play" aria-label="Play Doki Doki Literature Club">▶</button>
+          <div class="card-info">
+            <div class="card-title">Doki Doki Literature Club</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/deltarune" style="animation-delay:162ms"><img
+            src="./Afterglow — play something good_files/deltarune" alt="Deltarune" loading="lazy"><button class="play"
+            aria-label="Play Deltarune">▶</button>
+          <div class="card-info">
+            <div class="card-title">Deltarune</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/spookysoiree" style="animation-delay:180ms"><img
+            src="./Afterglow — play something good_files/spookysoiree" alt="FIRST KISS AT A SPOOKY SOIREE"
+            loading="lazy"><button class="play" aria-label="Play FIRST KISS AT A SPOOKY SOIREE">▶</button>
+          <div class="card-info">
+            <div class="card-title">FIRST KISS AT A SPOOKY SOIREE</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="truffled/domekeeper" style="animation-delay:198ms"><img
+            src="./Afterglow — play something good_files/domekeeper" alt="Dome Keeper" loading="lazy"><button
+            class="play" aria-label="Play Dome Keeper">▶</button>
+          <div class="card-info">
+            <div class="card-title">Dome Keeper</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/offlineparadise" style="animation-delay:216ms"><img
+            src="./Afterglow — play something good_files/offlineparadise" alt="Offline Paradise" loading="lazy"><button
+            class="play" aria-label="Play Offline Paradise">▶</button>
+          <div class="card-info">
+            <div class="card-title">Offline Paradise</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="truffled/yoked" style="animation-delay:234ms"><img
+            src="./Afterglow — play something good_files/yoked" alt="Yoked" loading="lazy"><button class="play"
+            aria-label="Play Yoked">▶</button>
+          <div class="card-info">
+            <div class="card-title">Yoked</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="truffled/verse" style="animation-delay:252ms"><img
+            src="./Afterglow — play something good_files/verse" alt="Gacha Verse" loading="lazy"><button class="play"
+            aria-label="Play Gacha Verse">▶</button>
+          <div class="card-info">
+            <div class="card-title">Gacha Verse</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/marioparty" style="animation-delay:270ms"><img
+            src="./Afterglow — play something good_files/marioparty" alt="Mario party 1" loading="lazy"><button
+            class="play" aria-label="Play Mario party 1">▶</button>
+          <div class="card-info">
+            <div class="card-title">Mario party 1</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/factoryballs4" style="animation-delay:288ms"><img
+            src="./Afterglow — play something good_files/factoryballs4" alt="Factory Balls 4" loading="lazy"><button
+            class="play" aria-label="Play Factory Balls 4">▶</button>
+          <div class="card-info">
+            <div class="card-title">Factory Balls 4</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/vex-x3m" style="animation-delay:306ms"><img
+            src="./Afterglow — play something good_files/vex-x3m" alt="Vex X3M" loading="lazy"><button class="play"
+            aria-label="Play Vex X3M">▶</button>
+          <div class="card-info">
+            <div class="card-title">Vex X3M</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/pvzge" style="animation-delay:324ms"><img
+            src="./Afterglow — play something good_files/pvzge" alt="Plants vs. Zombies 2: Gardenless"
+            loading="lazy"><button class="play" aria-label="Play Plants vs. Zombies 2: Gardenless">▶</button>
+          <div class="card-info">
+            <div class="card-title">Plants vs. Zombies 2: Gardenless</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+        <article class="card" data-id="selenite/supermariobros2" style="animation-delay:342ms"><img
+            src="./Afterglow — play something good_files/supermariobros2" alt="Super Mario Bros 2"
+            loading="lazy"><button class="play" aria-label="Play Super Mario Bros 2">▶</button>
+          <div class="card-info">
+            <div class="card-title">Super Mario Bros 2</div>
+            <div class="card-meta">Arcade · Play now</div>
+          </div>
+        </article>
+      </div>
+      <div class="pagination" id="pagination"><button class="pagebtn" disabled="" id="prev">←</button><span
+          class="pagecount">Page 1 of 59</span><button class="pagebtn" id="next">→</button></div>
+    </section>
+  </main>
+  <button class="ai-button" id="aiButton" onclick="openAI()"><span>✦</span> Afterglow AI</button>
+  <aside class="ai" id="aiPanel" aria-label="arctic AI">
+    <div class="ai-head">
+      <div class="ai-avatar">✦</div>
+      <div>
+        <div class="ai-name">arctic AI</div>
+        <div class="ai-sub">Streaming assistant</div>
+      </div><button class="ai-new" id="aiNew" type="button">New chat</button><button class="close" onclick="closeAI()"
+        aria-label="Close">×</button>
+    </div>
+    <div class="messages" id="messages"></div>
+    <form class="ai-input" id="aiForm"><textarea id="aiPrompt" rows="1" autocomplete="off"
+        placeholder="Message arctic AI…"></textarea><button class="send" id="aiSend" aria-label="Send">Send</button>
+    </form>
+  </aside>
+  <div class="toast" id="toast"></div>
+  <section class="proxy" id="proxyPanel" aria-label="Afterglow private browser" aria-hidden="true">
+    <div class="proxy-bar">
+      <div class="proxy-brand"><span class="proxy-mark">↗</span>afterglow</div><span class="proxy-label">Private
+        browser</span><span class="proxy-spacer"></span><span class="proxy-secure">Scramjet relay</span><button
+        class="proxy-close" onclick="closeProxy()" aria-label="Close browser">×</button>
+    </div>
+    <div class="proxy-stage"><iframe class="proxy-frame" id="proxyFrame" title="Afterglow private browser"
+        allow="fullscreen; clipboard-read; clipboard-write"></iframe>
+      <div class="proxy-loader" id="proxyLoader">
+        <div class="proxy-loader-inner"><span class="proxy-loader-mark" aria-hidden="true"></span><span
+            class="proxy-loader-title">Opening private browser</span><span class="proxy-loader-copy">Finding a secure
+            route</span></div>
+      </div>
+      <div class="proxy-note">
+        <div><strong>The private browser could not start.</strong>Check your connection and try opening it again.</div>
+      </div>
+    </div>
+  </section>
+  <script>
+    const $ = s => document.querySelector(s), gamesEl = $('#games'), catsEl = $('#categories'), pagesEl = $('#pagination');
+    const savedFavorites = (() => { try { return JSON.parse(localStorage.getItem('afterglow_favorites_v1') || '[]') } catch { return [] } })();
+    const state = { page: 1, pages: 1, total: 0, query: '', category: '', games: [], categories: [], ready: false, request: 0, favorites: new Set(savedFavorites) };
+    const PAGE_SIZE = 20;
+    const STORAGE_BASE = 'https://cdn.jsdelivr.net/gh/TongSherbet/storage@main/';
+    const placeholderCover = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="480" height="300"><rect width="100%" height="100%" fill="#182530"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#8ce9bf" font-size="64">▶</text></svg>');
+    const gameLibrary = {
+      catalog: [],
+      assetUrl(author, file) { return new URL(file, author ? `https://cdn.jsdelivr.net/gh/${author}@main/` : STORAGE_BASE).href },
+      async init() {
+        const collections = await Promise.all(['ugs.json', 'ckv.json'].map(async file => {
+          const response = await fetch(new URL(file, STORAGE_BASE));
+          if (!response.ok) throw new Error(`Could not load ${file} (${response.status})`);
+          const entries = await response.json();
+          if (!Array.isArray(entries)) throw new Error(`Invalid catalog: ${file}`);
+          return entries.filter(g => g.name && g.file).map(g => ({
+            id: `${g.source || file}:${g.author || ''}:${g.file}`, name: g.name,
+            category: (g.source || file.replace('.json', '')).toUpperCase(),
+            url: this.assetUrl(g.author, g.file),
+            image_token: g.cover_file ? this.assetUrl(g.cover_author, g.cover_file) : placeholderCover
+          }));
+        }));
+        this.catalog = collections.flat().sort((a, b) => a.name.localeCompare(b.name));
+      },
+      async getCategories() { return { categories: [...new Set(this.catalog.map(g => g.category))] } },
+      async getGames({ page, limit, q }) {
+        const games = this.catalog.filter(g => g.name.toLowerCase().includes(q.toLowerCase()) && (!state.category || g.category === state.category));
+        return { games: games.slice((page - 1) * limit, page * limit), pages: Math.ceil(games.length / limit), total: games.length };
+      },
+      async getImageUrl(url) { return url },
+      async loadGame(id) {
+        const game = this.catalog.find(g => g.id === id);
+        if (!game) throw new Error('Game not found');
+        const tab = window.open('about:blank', '_blank');
+        if (!tab) throw new Error('Allow popups to launch games');
+        tab.opener = null;
+        tab.document.title = game.name;
+        tab.document.body.textContent = 'Loading game…';
+        try {
+          const response = await fetch(game.url);
+          if (!response.ok) throw new Error(`Game request failed (${response.status})`);
+          const html = await response.text();
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const base = doc.createElement('base'); base.href = game.url; doc.head.prepend(base);
+          const frame = tab.document.createElement('iframe');
+          frame.title = game.name; frame.allow = 'autoplay; fullscreen; gamepad';
+          frame.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0';
+          frame.srcdoc = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+          tab.document.body.replaceChildren(frame);
+        } catch (error) { tab.document.body.textContent = error.message; throw error }
+      },
+      async getRandomGames() { return { games: this.catalog.length ? [this.catalog[Math.floor(Math.random() * this.catalog.length)]] : [] } }
+    };
+    const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
+    function toast(msg) { const el = $('#toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2400) }
+    function skeletons() { gamesEl.innerHTML = Array.from({ length: 10 }, () => '<div class="card skeleton"></div>').join('') }
+    async function init() { skeletons(); try { await gameLibrary.init(); state.ready = true; $('#dot').classList.add('live'); $('#sdkStatus').textContent = 'Arcade online'; const { categories } = await gameLibrary.getCategories(); state.categories = categories || []; renderCategories(); await loadGames(1) } catch (e) { console.error(e); $('#sdkStatus').textContent = 'Connection issue'; gamesEl.innerHTML = '<div class="empty">Couldn’t reach the arcade. Check your connection and refresh.</div>' } }
+    function renderCategories() { catsEl.innerHTML = ['All', ...state.categories].map(c => `<button class="chip ${(!state.category && c === 'All') || state.category === c ? 'active' : ''}" data-cat="${esc(c)}">${esc(c)}</button>`).join(''); catsEl.querySelectorAll('.chip').forEach(b => b.onclick = () => { state.category = b.dataset.cat === 'All' ? '' : b.dataset.cat; renderCategories(); loadGames(1) }) }
+    function saveFavorites() { localStorage.setItem('afterglow_favorites_v1', JSON.stringify([...state.favorites])) }
+    function sortFavoriteCards() { [...gamesEl.querySelectorAll('.card')].sort((a, b) => Number(state.favorites.has(b.dataset.id)) - Number(state.favorites.has(a.dataset.id))).forEach(card => gamesEl.appendChild(card)) }
+    function toggleFavorite(id, button) { state.favorites.has(id) ? state.favorites.delete(id) : state.favorites.add(id); saveFavorites(); const card = button.closest('.card'), active = state.favorites.has(id); button.classList.toggle('active', active); button.textContent = active ? '★' : '☆'; button.setAttribute('aria-label', active ? 'Remove from favorites' : 'Add to favorites'); card.classList.toggle('is-favorite', active); sortFavoriteCards() }
+    async function loadGames(page = 1) { if (!state.ready) return; const request = ++state.request; skeletons(); pagesEl.innerHTML = ''; try { const result = await gameLibrary.getGames({ page, limit: PAGE_SIZE, q: state.query }); if (request !== state.request) return; let list = result.games || []; if (state.category) list = list.filter(g => (g.category || '').toLowerCase() === state.category.toLowerCase()); list = [...list].sort((a, b) => Number(state.favorites.has(b.id)) - Number(state.favorites.has(a.id))); state.games = list; state.page = page; state.pages = result.pages || 1; state.total = result.total || list.length; $('#resultText').textContent = `${state.total.toLocaleString()} games available${state.query ? ' for “' + state.query + '”' : ''}`; const imgs = await Promise.all(list.map(g => g.image_token ? gameLibrary.getImageUrl(g.image_token).catch(() => '') : Promise.resolve(''))); if (request !== state.request) return; gamesEl.innerHTML = list.length ? list.map((g, i) => { const favorite = state.favorites.has(g.id); return `<article class="card${favorite ? ' is-favorite' : ''}" data-id="${esc(g.id)}" style="animation-delay:${i * 18}ms"><img src="${esc(imgs[i])}" alt="${esc(g.name)}" loading="lazy"><button class="favorite${favorite ? ' active' : ''}" aria-label="${favorite ? 'Remove from favorites' : 'Add to favorites'}">${favorite ? '★' : '☆'}</button><button class="play" aria-label="Play ${esc(g.name)}">▶</button><div class="card-info"><div class="card-title">${esc(g.name)}</div><div class="card-meta">${esc(g.category || 'Arcade')} · Play now</div></div></article>` }).join('') : '<div class="empty">No games found. Try another search or ask arctic AI for an idea.</div>'; gamesEl.querySelectorAll('.card img').forEach(img => img.addEventListener('error', () => { if (img.src !== placeholderCover) img.src = placeholderCover })); gamesEl.querySelectorAll('.card').forEach(card => card.addEventListener('click', () => play(card.dataset.id))); gamesEl.querySelectorAll('.favorite').forEach(button => button.addEventListener('click', event => { event.stopPropagation(); toggleFavorite(button.closest('.card').dataset.id, button) })); renderPages() } catch (e) { console.error(e); gamesEl.innerHTML = '<div class="empty">The arcade missed a beat. Try again in a moment.</div>' } }
+    function renderPages() { if (state.pages < 2) return; pagesEl.innerHTML = `<button class="pagebtn" ${state.page <= 1 ? 'disabled' : ''} id="prev">←</button><span class="pagecount">Page ${state.page} of ${state.pages}</span><button class="pagebtn" ${state.page >= state.pages ? 'disabled' : ''} id="next">→</button>`; $('#prev').onclick = () => { loadGames(state.page - 1); scrollToGames() }; $('#next').onclick = () => { loadGames(state.page + 1); scrollToGames() } }
+    async function play(id) { try { toast('Launching game…'); await gameLibrary.loadGame(id) } catch (e) { toast(e.message || 'Couldn’t launch that game') } }
+    async function surpriseMe() { if (!state.ready) return toast('The arcade is still connecting'); try { const { games } = await gameLibrary.getRandomGames(1); if (games && games[0]) play(games[0].id) } catch (e) { toast('Couldn’t pick a game right now') } }
+    function scrollToGames() { document.querySelector('#library').scrollIntoView({ behavior: 'smooth' }) }
+    function prepareProxy() { const frame = $('#proxyFrame'), loader = $('#proxyLoader'); loader.classList.remove('hidden'); if (frame.dataset.ready) { setTimeout(() => loader.classList.add('hidden'), 1200); return } frame.dataset.ready = 'true'; frame.addEventListener('load', () => { try { const doc = frame.contentDocument; if (!doc) return; doc.title = 'Afterglow Browser'; const style = doc.createElement('style'); style.id = 'afterglow-embedded-browser'; style.textContent = '.arctic-arctic,.arctic-arctic-brand,.wordmark,.monogram,.about-mark,.about-name{display:none!important}.arctic-shell{grid-template-columns:minmax(0,1fr)!important}.arctic-main{grid-column:1!important;grid-row:1!important}.arctic-surface{border-radius:0!important}body:after{display:none!important}'; doc.head.appendChild(style); let hideTimer; const sync = () => { doc.querySelectorAll('.arctic-arctic,.arctic-arctic-brand,.wordmark,.monogram').forEach(el => el.remove()); const status = [...doc.querySelectorAll('.ax-frame__phase,.ax-frame__status-text')].map(el => el.textContent || '').join(' '), busy = /finding|route|starting|relay|connecting|retrying|loading/i.test(status); clearTimeout(hideTimer); if (busy) loader.classList.remove('hidden'); else hideTimer = setTimeout(() => loader.classList.add('hidden'), 650) }; sync(); new MutationObserver(sync).observe(doc.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'hidden', 'aria-hidden'] }); setTimeout(() => { if (!doc.querySelector('.ax-frame__phase,.ax-frame__status-text')) loader.classList.add('hidden') }, 4200) } catch (e) { console.warn('Could not align embedded proxy chrome', e); setTimeout(() => loader.classList.add('hidden'), 4200) } }); frame.src = './index.html#/browser' }
+    function openProxy() { closeAI(); const panel = $('#proxyPanel'); panel.classList.add('open'); panel.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden'; prepareProxy() }
+    function closeProxy() { const panel = $('#proxyPanel'); panel.classList.remove('open'); panel.setAttribute('aria-hidden', 'true'); document.body.style.overflow = '' }
+    let searchTimer; $('#search').addEventListener('input', e => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { state.query = e.target.value.trim(); state.category = ''; renderCategories(); loadGames(1) }, 300) }); document.addEventListener('keydown', e => { if (e.key === '/' && !/input/i.test(document.activeElement.tagName)) { e.preventDefault(); $('#search').focus() } if (e.key === 'Escape') { $('#proxyPanel').classList.contains('open') ? closeProxy() : closeAI() } });
+    function openAI() { $('#aiPanel').classList.add('open'); $('#aiButton').style.opacity = '0'; setTimeout(() => $('#aiPrompt').focus(), 250) } function closeAI() { $('#aiPanel').classList.remove('open'); $('#aiButton').style.opacity = '1' }
+    const AI_ENDPOINT = 'https://arctic.lat/api/ai', AI_HISTORY_KEY = 'arctic_ai_thread_v1';
+    let aiMessages = (() => { try { const value = JSON.parse(localStorage.getItem(AI_HISTORY_KEY) || '[]'); return Array.isArray(value) ? value.slice(-200) : [] } catch { return [] } })(), aiController = null, aiBusy = false;
+    function saveAI() { try { localStorage.setItem(AI_HISTORY_KEY, JSON.stringify(aiMessages.slice(-200))) } catch { } }
+    function aiId() { return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) }
+    function renderAI() { const root = $('#messages'); root.innerHTML = ''; if (!aiMessages.length) { const empty = document.createElement('div'); empty.className = 'message bot'; empty.textContent = 'How can I help?'; root.appendChild(empty) } for (const message of aiMessages) { const bubble = document.createElement('div'); bubble.className = 'message ' + (message.role === 'user' ? 'user' : 'bot') + (message.error ? ' error' : ''); if (message.reasoning) { const details = document.createElement('details'); details.open = !message.content; const summary = document.createElement('summary'); summary.textContent = 'Thinking'; const thought = document.createElement('div'); thought.textContent = message.reasoning; details.append(summary, thought); bubble.appendChild(details) } if (message.content) { const answer = document.createElement('div'); answer.textContent = message.content; bubble.appendChild(answer) } else if (message.role === 'assistant' && aiBusy) { const dots = document.createElement('div'); dots.className = 'typing'; dots.innerHTML = '<i></i><i></i><i></i>'; bubble.appendChild(dots) } root.appendChild(bubble) } root.scrollTop = root.scrollHeight; const send = $('#aiSend'); send.textContent = aiBusy ? 'Stop' : 'Send'; send.classList.toggle('stop', aiBusy); send.disabled = !aiBusy && !$('#aiPrompt').value.trim() }
+    function parseAIEvent(line) { if (!line.trim().startsWith('data:')) return []; const data = line.trim().slice(5).trim(); if (data === '[DONE]') return 'done'; try { const delta = JSON.parse(data).choices?.[0]?.delta, out = []; if (delta?.reasoning_content) out.push({ kind: 'reasoning', text: delta.reasoning_content }); if (delta?.content) out.push({ kind: 'answer', text: delta.content }); return out } catch { return [] } }
+    async function askAI() { const input = $('#aiPrompt'), prompt = input.value.trim(); if (!prompt || aiBusy) return; input.value = ''; const user = { id: aiId(), role: 'user', content: prompt }, assistant = { id: aiId(), role: 'assistant', content: '' }; aiMessages.push(user, assistant); aiBusy = true; aiController = new AbortController; saveAI(); renderAI(); try { const headers = { 'Content-Type': 'application/json' }, token = localStorage.getItem('arctic_auth_token'); if (token) headers.Authorization = 'Bearer ' + token; const response = await fetch(AI_ENDPOINT, { method: 'POST', headers, body: JSON.stringify({ messages: aiMessages.filter(m => m !== assistant).map(({ role, content }) => ({ role, content })) }), signal: aiController.signal }); if (!response.ok || !response.body) { let detail = ''; try { detail = (await response.json()).error || '' } catch { } throw new Error(detail || `AI request failed (${response.status})`) } const reader = response.body.getReader(), decoder = new TextDecoder(); let buffer = '', doneEvent = false; for (; ;) { const { done, value } = await reader.read(); buffer += decoder.decode(value || new Uint8Array(), { stream: !done }); let newline; while ((newline = buffer.indexOf('\n')) >= 0) { const line = buffer.slice(0, newline); buffer = buffer.slice(newline + 1); const event = parseAIEvent(line); if (event === 'done') { doneEvent = true; break } for (const part of event) { if (part.kind === 'reasoning') assistant.reasoning = (assistant.reasoning || '') + part.text; else assistant.content += part.text; renderAI() } } if (done || doneEvent) break } if (!assistant.content && !assistant.reasoning) throw new Error('No response — the model returned nothing.') } catch (error) { if (!assistant.content && !assistant.reasoning) { assistant.content = error.name === 'AbortError' ? 'Response interrupted.' : (error.message || 'The assistant could not respond.'); assistant.error = error.name !== 'AbortError' } else if (error.name === 'AbortError') assistant.content += '\n\nResponse interrupted.'; else assistant.content += '\n\n' + (error.message || 'The response was interrupted.') } finally { aiBusy = false; aiController = null; saveAI(); renderAI(); input.focus() } }
+    $('#aiForm').onsubmit = e => { e.preventDefault(); if (aiBusy) aiController?.abort(); else askAI() }; $('#aiSend').onclick = e => { if (aiBusy) { e.preventDefault(); aiController?.abort() } }; $('#aiPrompt').addEventListener('input', renderAI); $('#aiPrompt').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!aiBusy) askAI() } }); $('#aiNew').onclick = () => { aiController?.abort(); aiMessages = []; saveAI(); renderAI(); $('#aiPrompt').focus() }; renderAI(); init();
+  </script>
+
+
+</body>
+
+</html>
