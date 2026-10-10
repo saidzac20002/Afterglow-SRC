@@ -42,8 +42,19 @@ body{display:flex;overflow:hidden}
 .tool-btn:hover{background:#2a2a2a;color:var(--text)}
 .tool-btn.active{color:var(--blue);background:rgba(29,155,240,.12)}
 .spacer{flex:1}
-.model-chip{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;padding:6px 18px 6px 8px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238b8b8b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 4px center}
-.model-chip:hover{color:var(--text)}
+.model-wrap{position:relative}
+.model-btn{display:flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;padding:6px 8px;border-radius:10px}
+.model-btn:hover{background:#2a2a2a;color:var(--text)}
+.model-btn-icon{display:grid;place-items:center;width:16px;color:var(--muted)}
+.model-btn-icon svg,.model-item .mi-icon svg{display:block}
+.model-chev{opacity:.6}
+.model-menu{position:absolute;bottom:calc(100% + 8px);right:0;min-width:180px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:14px;padding:6px;box-shadow:0 12px 40px rgba(0,0,0,.45);z-index:40}
+.model-item{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;color:var(--text);font:inherit;font-size:13.5px;padding:10px 12px;border-radius:10px;cursor:pointer;text-align:left}
+.model-item:hover{background:#242424}
+.model-item .mi-icon{width:18px;display:grid;place-items:center;opacity:.9;color:var(--muted)}
+.model-item .mi-check{margin-left:auto;color:var(--text);opacity:0;display:grid;place-items:center}
+.model-item.selected .mi-check{opacity:1}
+.model-item.selected{background:#222}
 .send-fab{width:34px;height:34px;border-radius:50%;border:0;background:#f4f4f4;color:#111;cursor:pointer;display:grid;place-items:center}
 .send-fab:disabled{opacity:.3;cursor:not-allowed}
 .send-fab.stop{background:#333;color:#fff}
