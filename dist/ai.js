@@ -1,343 +1,251 @@
-const AI_BASE = "https://cdn.northstreetumc.org";
-const STORE_KEY = "grok_ai_chats_v1";
-const CHUNK = 800000;
-const $ = (id) => document.getElementById(id);
-const els = {
-  status: $("status"), chat: $("chat"), chatInner: $("chatInner"),
-  form: $("form"), input: $("input"), send: $("send"), model: $("model"),
-  webSearch: $("webSearch"), newChat: $("newChat"), recents: $("recents"),
-  screenshare: $("screenshare"), ssBar: $("ssBar"), ssVideo: $("ssVideo"),
-  ssAsk: $("ssAsk"), ssStop: $("ssStop"), ssDot: $("ssDot"), ssLabel: $("ssLabel"),
-  attachBtn: $("attachBtn"), fileInput: $("fileInput"),
-};
-let ws = null, chats = loadChats(), currentId = chats[0]?.id || null;
-let streaming = false, streamAssistant = null, reconnectTimer = null;
-let pendingMediaResolve = null, ssStream = null;
+const AI_BASE="https://cdn.northstreetumc.org";
+const STORE_KEY="grok_ui_chats_v1";
+const CHUNK=800000;
+const $=(id)=>document.getElementById(id);
 
-function loadChats() {
-  try { const r = JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); return Array.isArray(r) ? r : []; }
-  catch { return []; }
-}
-function saveChats() { try { localStorage.setItem(STORE_KEY, JSON.stringify(chats.slice(0, 40))); } catch {} }
-function currentChat() { return chats.find(c => c.id === currentId) || null; }
-function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
-function setStatus(text, kind) {
-  els.status.textContent = text;
-  els.status.className = "status" + (kind ? " " + kind : "");
-}
-function wsUrl() {
-  const u = new URL("/ai", AI_BASE);
-  u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
-  return u.toString();
-}
-function scheduleReconnect() {
-  if (reconnectTimer) clearTimeout(reconnectTimer);
-  reconnectTimer = setTimeout(connect, 1500);
-}
-function connect() {
-  if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+let ws=null,chats=load(),currentId=chats[0]?.id||null;
+let streaming=false,streamAsst=null,reconnect=null,pendingMedia=null,ssStream=null;
+let webOn=false;
+
+const statusEl=$("status"),recents=$("recents"),empty=$("empty"),thread=$("thread"),msgs=$("msgs");
+const input=$("input"),input2=$("input2"),model=$("model"),model2=$("model2");
+const send=$("send"),send2=$("send2");
+
+function load(){try{const r=JSON.parse(localStorage.getItem(STORE_KEY)||"[]");return Array.isArray(r)?r:[]}catch{return[]}}
+function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(chats.slice(0,50)))}catch{}}
+function cur(){return chats.find(c=>c.id===currentId)||null}
+function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
+function setStatus(t,k){statusEl.textContent=t;statusEl.className="status"+(k?" "+k:"")}
+function wsUrl(){const u=new URL("/ai",AI_BASE);u.protocol=u.protocol==="https:"?"wss:":"ws:";return u.toString()}
+
+function connect(){
+  if(ws&&(ws.readyState===0||ws.readyState===1))return;
   setStatus("connecting…");
-  try { ws = new WebSocket(wsUrl()); }
-  catch { setStatus("failed", "bad"); scheduleReconnect(); return; }
-  ws.onopen = () => setStatus("connected", "ok");
-  ws.onclose = () => {
-    setStatus("disconnected", "bad");
-    if (streaming) { streaming = false; streamAssistant = null; updateSend(); renderMessages(); }
-    scheduleReconnect();
-  };
-  ws.onerror = () => setStatus("error", "bad");
-  ws.onmessage = (ev) => { try { onServer(JSON.parse(ev.data)); } catch {} };
+  try{ws=new WebSocket(wsUrl())}catch{setStatus("failed","bad");schedule();return}
+  ws.onopen=()=>setStatus("connected","ok");
+  ws.onclose=()=>{setStatus("disconnected","bad");if(streaming){streaming=false;streamAsst=null;updSend();render()}schedule()};
+  ws.onerror=()=>setStatus("error","bad");
+  ws.onmessage=(ev)=>{try{onMsg(JSON.parse(ev.data))}catch{}};
 }
-function onServer(m) {
-  if (m.type === "requestMediaId" && pendingMediaResolve) {
-    pendingMediaResolve(m.mediaId); pendingMediaResolve = null; return;
-  }
-  switch (m.type) {
-    case "toast": setStatus(m.text || "notice"); break;
-    case "ping": break;
-    case "models": {
-      const groups = m.models || {}, prev = els.model.value;
-      els.model.innerHTML = "";
-      Object.keys(groups).forEach((g) => {
-        const og = document.createElement("optgroup"); og.label = g;
-        (groups[g] || []).forEach((id) => {
-          const v = typeof id === "string" ? id : (id.id || id.name || String(id));
-          const o = document.createElement("option"); o.value = v; o.textContent = v; og.appendChild(o);
-        });
-        els.model.appendChild(og);
-      });
-      const prefer = ["grok-4-6", "gpt-5-4", "gpt-5-5", "instant"];
-      let chosen = prev;
-      if (!chosen || ![...els.model.options].some((o) => o.value === chosen))
-        chosen = prefer.find((p) => [...els.model.options].some((o) => o.value === p)) || els.model.options[0]?.value;
-      if (chosen) els.model.value = chosen;
+function schedule(){if(reconnect)clearTimeout(reconnect);reconnect=setTimeout(connect,1500)}
+
+function syncModels(select,list,prev){
+  select.innerHTML="";
+  Object.keys(list||{}).forEach(g=>{
+    const og=document.createElement("optgroup");og.label=g;
+    (list[g]||[]).forEach(id=>{
+      const v=typeof id==="string"?id:(id.id||id.name||String(id));
+      const o=document.createElement("option");o.value=v;o.textContent=v;og.appendChild(o);
+    });
+    select.appendChild(og);
+  });
+  const prefer=["grok-4-6","gpt-5-4","gpt-5-5","instant"];
+  let chosen=prev;
+  if(!chosen||![...select.options].some(o=>o.value===chosen))
+    chosen=prefer.find(p=>[...select.options].some(o=>o.value===p))||select.options[0]?.value;
+  if(chosen)select.value=chosen;
+}
+
+function onMsg(m){
+  if(m.type==="requestMediaId"&&pendingMedia){pendingMedia(m.mediaId);pendingMedia=null;return}
+  switch(m.type){
+    case"toast":setStatus(m.text||"notice");break;
+    case"ping":break;
+    case"models":
+      syncModels(model,m.models,model.value);
+      syncModels(model2,m.models,model2.value);
       break;
-    }
-    case "message":
-      ensureStream();
-      if (m.conversationId && currentChat()) currentChat().conversationId = m.conversationId;
-      streaming = true; updateSend(); renderMessages(); break;
-    case "thinking":
-      ensureStream();
-      streamAssistant.reasoning = (streamAssistant.reasoning || "") + (m.delta || m.text || "");
-      renderMessages(); break;
-    case "content":
-      ensureStream();
-      streamAssistant.content = (streamAssistant.content || "") + (m.delta || m.text || "");
-      touchTitle(); renderMessages(); break;
-    case "processing": setStatus(m.text || "processing…"); break;
-    case "image":
-    case "video":
-      ensureStream();
-      streamAssistant.content = (streamAssistant.content || "") + (streamAssistant.content ? "\n\n" : "") + `[${m.type}](${m.url || ""})`;
-      renderMessages(); break;
-    case "done":
-      if (m.conversationId && currentChat()) currentChat().conversationId = m.conversationId;
-      streaming = false; streamAssistant = null; setStatus("connected", "ok");
-      saveChats(); renderRecents(); updateSend(); renderMessages(); break;
-    case "error":
-      ensureStream();
-      streamAssistant.content = streamAssistant.content
-        ? streamAssistant.content + "\n\n" + (m.text || m.error || "Error")
-        : (m.text || m.error || "Error");
-      streamAssistant.error = true;
-      streaming = false; streamAssistant = null; setStatus("connected", "ok");
-      saveChats(); updateSend(); renderMessages(); break;
-    default: console.log("[AI]", m.type, m);
+    case"message":
+      ensure();if(m.conversationId&&cur())cur().conversationId=m.conversationId;
+      streaming=true;updSend();render();break;
+    case"thinking":
+      ensure();streamAsst.reasoning=(streamAsst.reasoning||"")+(m.delta||m.text||"");render();break;
+    case"content":
+      ensure();streamAsst.content=(streamAsst.content||"")+(m.delta||m.text||"");
+      title();render();break;
+    case"processing":setStatus(m.text||"processing…");break;
+    case"done":
+      if(m.conversationId&&cur())cur().conversationId=m.conversationId;
+      streaming=false;streamAsst=null;setStatus("connected","ok");save();renderRecents();updSend();render();break;
+    case"error":
+      ensure();streamAsst.content=streamAsst.content?streamAsst.content+"\n\n"+(m.text||m.error||"Error"):(m.text||m.error||"Error");
+      streamAsst.error=true;streaming=false;streamAsst=null;setStatus("connected","ok");save();updSend();render();break;
+    default:console.log("[AI]",m.type,m);
   }
 }
-function ensureStream() {
-  const c = currentChat(); if (!c) return;
-  if (!streamAssistant) {
-    streamAssistant = { role: "assistant", content: "", reasoning: "" };
-    c.messages.push(streamAssistant); streaming = true;
-  }
+function ensure(){
+  const c=cur();if(!c)return;
+  if(!streamAsst){streamAsst={role:"assistant",content:"",reasoning:""};c.messages.push(streamAsst);streaming=true}
 }
-function touchTitle() {
-  const c = currentChat(); if (!c || c.title) return;
-  const u = c.messages.find((m) => m.role === "user");
-  if (u) { c.title = (u.content || "Image").slice(0, 48); renderRecents(); }
+function title(){
+  const c=cur();if(!c||c.title)return;
+  const u=c.messages.find(m=>m.role==="user");
+  if(u){c.title=(u.content||"Image").slice(0,48);renderRecents()}
 }
-function newChat() {
-  const c = { id: uid(), title: "", conversationId: null, messages: [], updatedAt: Date.now() };
-  chats.unshift(c); currentId = c.id; streaming = false; streamAssistant = null;
-  saveChats(); renderRecents(); renderMessages(); updateSend();
-  if (ws && ws.readyState === 1) try { ws.send(JSON.stringify({ type: "newChat" })); } catch {}
-  els.input.focus();
+
+function showThread(on){
+  empty.hidden=!!on;thread.hidden=!on;
 }
-function selectChat(id) {
-  if (streaming) return;
-  currentId = id; streamAssistant = null; renderRecents(); renderMessages(); updateSend();
+function newChat(){
+  const c={id:uid(),title:"",conversationId:null,messages:[],updatedAt:Date.now()};
+  chats.unshift(c);currentId=c.id;streaming=false;streamAsst=null;
+  save();renderRecents();render();updSend();
+  if(ws&&ws.readyState===1)try{ws.send(JSON.stringify({type:"newChat"}))}catch{}
+  activeInput().focus();
 }
-function renderRecents() {
-  els.recents.innerHTML = "";
-  chats.forEach((c) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "recent-item" + (c.id === currentId ? " active" : "");
-    b.textContent = c.title || "New chat";
-    b.onclick = () => selectChat(c.id);
-    els.recents.appendChild(b);
+function selectChat(id){
+  if(streaming)return;
+  currentId=id;streamAsst=null;renderRecents();render();updSend();
+}
+function renderRecents(){
+  recents.innerHTML="";
+  chats.forEach(c=>{
+    const b=document.createElement("button");
+    b.type="button";b.className="chat-item"+(c.id===currentId?" active":"");
+    b.textContent=c.title||"New chat";
+    b.onclick=()=>selectChat(c.id);
+    recents.appendChild(b);
   });
 }
-function renderMessages() {
-  const c = currentChat(), inner = els.chatInner;
-  inner.innerHTML = "";
-  if (!c || !c.messages.length) {
-    inner.innerHTML = '<div class="welcome"><h1>What can I <em>help</em> with?</h1><p>Ask anything, share your screen, or toggle web search.</p></div>';
-    return;
-  }
-  c.messages.forEach((m) => {
-    const row = document.createElement("div");
-    row.className = "msg " + m.role + (m.error ? " error" : "");
-    const av = document.createElement("div");
-    av.className = "avatar";
-    av.textContent = m.role === "user" ? "You" : "G";
-    const body = document.createElement("div");
-    body.className = "body";
-    if (m.reasoning) {
-      const th = document.createElement("div");
-      th.className = "thinking"; th.textContent = m.reasoning; body.appendChild(th);
+function render(){
+  const c=cur();
+  if(!c||!c.messages.length){showThread(false);return}
+  showThread(true);
+  msgs.innerHTML="";
+  c.messages.forEach(m=>{
+    const row=document.createElement("div");
+    row.className="msg "+m.role+(m.error?" error":"");
+    const av=document.createElement("div");av.className="av";av.textContent=m.role==="user"?"You":"";
+    const body=document.createElement("div");body.className="body";
+    if(m.reasoning){const t=document.createElement("div");t.className="thinking";t.textContent=m.reasoning;body.appendChild(t)}
+    if(m.imageUrl){const img=document.createElement("img");img.className="shot";img.src=m.imageUrl;body.appendChild(img)}
+    if(m.content){const t=document.createElement("div");t.textContent=m.content;body.appendChild(t)}
+    else if(m.role==="assistant"&&streaming&&m===streamAsst){
+      const d=document.createElement("div");d.className="typing";d.innerHTML="<i></i><i></i><i></i>";body.appendChild(d);
     }
-    if (m.imageUrl) {
-      const img = document.createElement("img");
-      img.className = "shot"; img.src = m.imageUrl; img.alt = "Attachment"; body.appendChild(img);
-    }
-    if (m.content) {
-      const t = document.createElement("div"); t.textContent = m.content; body.appendChild(t);
-    } else if (m.role === "assistant" && streaming && m === streamAssistant) {
-      const dots = document.createElement("div");
-      dots.className = "typing"; dots.innerHTML = "<i></i><i></i><i></i>"; body.appendChild(dots);
-    }
-    row.append(av, body); inner.appendChild(row);
+    row.append(av,body);msgs.appendChild(row);
   });
-  els.chat.scrollTop = els.chat.scrollHeight;
+  const stage=$("stage");stage.scrollTop=stage.scrollHeight;
 }
-function updateSend() {
-  const has = !!els.input.value.trim();
-  els.send.disabled = !streaming && !has;
-  els.send.classList.toggle("stop", streaming);
-  els.send.innerHTML = streaming
-    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>'
-    : '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l-1.4 1.4L16.2 11H4v2h12.2l-5.6 5.6L12 20l8-8-8-8z"/></svg>';
-}
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => {
-      const s = String(r.result || "");
-      const i = s.indexOf(",");
-      resolve(i >= 0 ? s.slice(i + 1) : s);
-    };
-    r.onerror = reject;
-    r.readAsDataURL(file);
+function activeInput(){return thread.hidden?input:input2}
+function activeModel(){return thread.hidden?model:model2}
+function updSend(){
+  [send,send2].forEach(btn=>{
+    const ta=btn===send?input:input2;
+    const has=!!ta.value.trim();
+    btn.disabled=!streaming&&!has;
+    btn.classList.toggle("stop",streaming);
   });
 }
-async function sendMedia(file, prompt, previewUrl) {
-  if (!ws || ws.readyState !== 1) throw new Error("not connected");
-  const model = els.model.value;
-  if (!model) throw new Error("wait for models");
-  let c = currentChat();
-  if (!c) { newChat(); c = currentChat(); }
-  c.messages.push({ role: "user", content: prompt || "", imageUrl: previewUrl || undefined });
-  if (!c.title) c.title = (prompt || "Screen / image").slice(0, 48);
-  chats = [c, ...chats.filter((x) => x.id !== c.id)];
-  saveChats(); renderRecents();
-  streamAssistant = { role: "assistant", content: "", reasoning: "" };
-  c.messages.push(streamAssistant);
-  streaming = true; updateSend(); renderMessages();
-  const b64 = await fileToBase64(file);
-  const mediaId = await new Promise((resolve, reject) => {
-    pendingMediaResolve = resolve;
-    ws.send(JSON.stringify({
-      type: "mediaStart", model, mime: file.type || "image/jpeg",
-      conversationId: c.conversationId || undefined,
-    }));
-    setTimeout(() => {
-      if (pendingMediaResolve === resolve) { pendingMediaResolve = null; reject(new Error("upload timed out")); }
-    }, 20000);
+function autoSize(ta){ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,160)+"px"}
+
+function sendText(){
+  const ta=activeInput();
+  const text=ta.value.trim();
+  if(!text||streaming)return;
+  if(!ws||ws.readyState!==1){setStatus("not connected","bad");connect();return}
+  const mod=activeModel().value;
+  if(!mod){setStatus("wait for models…");return}
+  let c=cur();if(!c){newChat();c=cur()}
+  c.messages.push({role:"user",content:text});
+  c.updatedAt=Date.now();
+  if(!c.title)c.title=text.slice(0,48);
+  chats=[c,...chats.filter(x=>x.id!==c.id)];
+  save();renderRecents();
+  streamAsst={role:"assistant",content:"",reasoning:""};
+  c.messages.push(streamAsst);
+  streaming=true;ta.value="";autoSize(ta);updSend();render();
+  const payload={type:"sendMessage",content:text,model:mod,webSearch:webOn};
+  if(c.conversationId)payload.conversationId=c.conversationId;
+  try{ws.send(JSON.stringify(payload))}catch(e){
+    streamAsst.content=e.message||"Failed";streamAsst.error=true;
+    streaming=false;streamAsst=null;save();updSend();render();
+  }
+}
+
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>{const s=String(r.result||"");const i=s.indexOf(",");resolve(i>=0?s.slice(i+1):s)};
+    r.onerror=reject;r.readAsDataURL(file);
   });
-  for (let i = 0; i < b64.length; i += CHUNK) {
-    ws.send(JSON.stringify({ type: "mediaChunk", mediaId, chunk: b64.slice(i, i + CHUNK) }));
-  }
-  ws.send(JSON.stringify({
-    type: "mediaDone", mediaId,
-    prompt: prompt || "Describe this image.",
-    webSearch: els.webSearch.classList.contains("on"),
-  }));
 }
-function sendMessage() {
-  const text = els.input.value.trim();
-  if (!text || streaming) return;
-  if (!ws || ws.readyState !== 1) { setStatus("not connected", "bad"); connect(); return; }
-  const model = els.model.value;
-  if (!model) { setStatus("wait for models…"); return; }
-  let c = currentChat();
-  if (!c) { newChat(); c = currentChat(); }
-  c.messages.push({ role: "user", content: text });
-  c.updatedAt = Date.now();
-  if (!c.title) c.title = text.slice(0, 48);
-  chats = [c, ...chats.filter((x) => x.id !== c.id)];
-  saveChats(); renderRecents();
-  streamAssistant = { role: "assistant", content: "", reasoning: "" };
-  c.messages.push(streamAssistant);
-  streaming = true; els.input.value = ""; autoSize(); updateSend(); renderMessages();
-  const payload = {
-    type: "sendMessage", content: text, model,
-    webSearch: els.webSearch.classList.contains("on"),
-  };
-  if (c.conversationId) payload.conversationId = c.conversationId;
-  try { ws.send(JSON.stringify(payload)); }
-  catch (e) {
-    streamAssistant.content = e.message || "Failed to send"; streamAssistant.error = true;
-    streaming = false; streamAssistant = null; saveChats(); updateSend(); renderMessages();
-  }
+async function sendMedia(file,prompt,previewUrl){
+  if(!ws||ws.readyState!==1)throw new Error("not connected");
+  const mod=activeModel().value;if(!mod)throw new Error("wait for models");
+  let c=cur();if(!c){newChat();c=cur()}
+  c.messages.push({role:"user",content:prompt||"",imageUrl:previewUrl||undefined});
+  if(!c.title)c.title=(prompt||"Image").slice(0,48);
+  chats=[c,...chats.filter(x=>x.id!==c.id)];save();renderRecents();
+  streamAsst={role:"assistant",content:"",reasoning:""};c.messages.push(streamAsst);
+  streaming=true;updSend();render();
+  const b64=await fileToBase64(file);
+  const mediaId=await new Promise((resolve,reject)=>{
+    pendingMedia=resolve;
+    ws.send(JSON.stringify({type:"mediaStart",model:mod,mime:file.type||"image/jpeg",conversationId:c.conversationId||undefined}));
+    setTimeout(()=>{if(pendingMedia===resolve){pendingMedia=null;reject(new Error("upload timed out"))}},20000);
+  });
+  for(let i=0;i<b64.length;i+=CHUNK)ws.send(JSON.stringify({type:"mediaChunk",mediaId,chunk:b64.slice(i,i+CHUNK)}));
+  ws.send(JSON.stringify({type:"mediaDone",mediaId,prompt:prompt||"Describe this image.",webSearch:webOn}));
 }
-function autoSize() {
-  const ta = els.input; ta.style.height = "auto";
-  ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
+
+async function startSS(){
+  if(ssStream)return;
+  if(!navigator.mediaDevices?.getDisplayMedia){setStatus("screenshare not supported","bad");return}
+  try{ssStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false})}
+  catch(e){if(e?.name!=="NotAllowedError")setStatus("screenshare failed","bad");return}
+  $("ssVideo").srcObject=ssStream;
+  $("ssBar").classList.add("show");
+  ssStream.getVideoTracks()[0]?.addEventListener("ended",stopSS);
+  setStatus("screenshare live","ok");
+  if(thread.hidden)showThread(true);
 }
-async function startScreenshare() {
-  if (ssStream) { setStatus("screenshare already active"); return; }
-  if (!navigator.mediaDevices?.getDisplayMedia) { setStatus("screenshare not supported", "bad"); return; }
-  try {
-    ssStream = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: "monitor" }, audio: false });
-  } catch (err) {
-    if (err?.name !== "NotAllowedError") setStatus("screenshare failed", "bad");
-    return;
-  }
-  els.ssVideo.srcObject = ssStream;
-  els.ssBar.classList.add("show");
-  els.screenshare.classList.add("live");
-  els.ssDot.hidden = false;
-  els.ssLabel.textContent = "Live — click “Ask about screen” to analyze a frame";
-  const track = ssStream.getVideoTracks()[0];
-  if (track) track.addEventListener("ended", stopScreenshare);
-  setStatus("screenshare live", "ok");
+function stopSS(){
+  if(ssStream){ssStream.getTracks().forEach(t=>t.stop());ssStream=null}
+  $("ssVideo").srcObject=null;$("ssBar").classList.remove("show");
+  setStatus("connected","ok");
 }
-function stopScreenshare() {
-  if (ssStream) { ssStream.getTracks().forEach((t) => t.stop()); ssStream = null; }
-  els.ssVideo.srcObject = null;
-  els.ssBar.classList.remove("show");
-  els.screenshare.classList.remove("live");
-  els.ssDot.hidden = true;
-  setStatus("connected", "ok");
+async function askSS(){
+  if(streaming)return;
+  if(!ssStream){await startSS();return}
+  const video=$("ssVideo");
+  if(!video.videoWidth){setStatus("no frame yet","bad");return}
+  const canvas=document.createElement("canvas");
+  const scale=Math.min(1,1280/video.videoWidth);
+  canvas.width=Math.round(video.videoWidth*scale);
+  canvas.height=Math.round(video.videoHeight*scale);
+  canvas.getContext("2d").drawImage(video,0,0,canvas.width,canvas.height);
+  const blob=await new Promise(r=>canvas.toBlob(r,"image/jpeg",0.85));
+  if(!blob)return;
+  const file=new File([blob],"screen.jpg",{type:"image/jpeg"});
+  const prompt=activeInput().value.trim()||"What do you see on my screen?";
+  activeInput().value="";
+  await sendMedia(file,prompt,URL.createObjectURL(blob));
 }
-async function captureScreenFrame() {
-  const video = els.ssVideo;
-  if (!ssStream || !video.videoWidth) throw new Error("no screen frame yet");
-  const canvas = document.createElement("canvas");
-  const maxW = 1280;
-  const scale = Math.min(1, maxW / video.videoWidth);
-  canvas.width = Math.round(video.videoWidth * scale);
-  canvas.height = Math.round(video.videoHeight * scale);
-  canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-  const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.85));
-  if (!blob) throw new Error("capture failed");
-  return { file: new File([blob], "screen.jpg", { type: "image/jpeg" }), previewUrl: URL.createObjectURL(blob) };
+
+function bindInput(ta,btn){
+  ta.addEventListener("input",()=>{autoSize(ta);updSend()});
+  ta.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(!streaming)sendText()}});
+  btn.addEventListener("click",()=>{if(streaming){streaming=false;streamAsst=null;updSend();render()}else sendText()});
 }
-async function askAboutScreen() {
-  if (streaming) return;
-  if (!ssStream) { await startScreenshare(); return; }
-  try {
-    els.ssAsk.disabled = true;
-    els.ssLabel.textContent = "Capturing frame…";
-    const { file, previewUrl } = await captureScreenFrame();
-    const prompt = els.input.value.trim() || "What do you see on my screen? Summarize and answer any visible questions.";
-    els.input.value = ""; autoSize();
-    els.ssLabel.textContent = "Sending to AI…";
-    await sendMedia(file, prompt, previewUrl);
-    els.ssLabel.textContent = "Live — click “Ask about screen” to analyze a frame";
-  } catch (e) {
-    setStatus(e.message || "screenshare error", "bad");
-    els.ssLabel.textContent = "Capture failed — try again";
-  } finally { els.ssAsk.disabled = false; }
-}
-els.form.addEventListener("submit", (e) => {
-  e.preventDefault();
-  if (streaming) { streaming = false; streamAssistant = null; updateSend(); renderMessages(); return; }
-  sendMessage();
-});
-els.input.addEventListener("input", () => { autoSize(); updateSend(); });
-els.input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!streaming) sendMessage(); }
-});
-els.newChat.addEventListener("click", newChat);
-els.webSearch.addEventListener("click", () => els.webSearch.classList.toggle("on"));
-els.screenshare.addEventListener("click", () => { if (ssStream) stopScreenshare(); else startScreenshare(); });
-els.ssStop.addEventListener("click", stopScreenshare);
-els.ssAsk.addEventListener("click", askAboutScreen);
-els.attachBtn.addEventListener("click", () => els.fileInput.click());
-els.fileInput.addEventListener("change", async () => {
-  const file = els.fileInput.files?.[0];
-  els.fileInput.value = "";
-  if (!file || streaming) return;
-  try {
-    const previewUrl = URL.createObjectURL(file);
-    const prompt = els.input.value.trim() || "Describe this image.";
-    els.input.value = ""; autoSize();
-    await sendMedia(file, prompt, previewUrl);
-  } catch (e) { setStatus(e.message || "upload failed", "bad"); }
-});
-if (!currentId) newChat(); else { renderRecents(); renderMessages(); }
-updateSend(); connect(); els.input.focus();
+bindInput(input,send);bindInput(input2,send2);
+
+$("newChat").onclick=newChat;
+$("promoDismiss").onclick=()=>$("promo").hidden=true;
+function toggleWeb(btn){webOn=!webOn;btn.classList.toggle("active",webOn);$("webSearch").classList.toggle("active",webOn);$("webSearch2").classList.toggle("active",webOn)}
+$("webSearch").onclick=()=>toggleWeb($("webSearch"));
+$("webSearch2").onclick=()=>toggleWeb($("webSearch2"));
+$("screenshare").onclick=()=>{if(ssStream)stopSS();else startSS()};
+$("screenshare2").onclick=()=>{if(ssStream)stopSS();else startSS()};
+$("ssStop").onclick=stopSS;$("ssAsk").onclick=askSS;
+$("attachBtn").onclick=$("attachBtn2").onclick=()=>$("fileInput").click();
+$("fileInput").onchange=async()=>{
+  const f=$("fileInput").files?.[0];$("fileInput").value="";
+  if(!f||streaming)return;
+  try{await sendMedia(f,activeInput().value.trim()||"Describe this image.",URL.createObjectURL(f));activeInput().value=""}catch(e){setStatus(e.message||"upload failed","bad")}
+};
+model.onchange=()=>{model2.value=model.value};
+model2.onchange=()=>{model.value=model2.value};
+
+if(!currentId)newChat();else{renderRecents();render()}
+updSend();connect();input.focus();
