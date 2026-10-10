@@ -15,16 +15,13 @@
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
 body{display:flex;overflow:hidden}
 .sidebar{width:260px;background:var(--sidebar);display:flex;flex-direction:column;flex-shrink:0;border-right:1px solid #1a1a1a}
-.sb-top{display:flex;align-items:center;gap:8px;padding:12px 12px 8px}
 .sb-icon{width:34px;height:34px;border:0;border-radius:10px;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center}
 .sb-icon:hover{background:var(--sidebar-hover);color:var(--text)}
-.nav{padding:4px 10px;display:flex;flex-direction:column;gap:2px}
+.nav{padding:12px 10px 4px;display:flex;flex-direction:column;gap:2px}
 .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;border:0;background:transparent;color:var(--text);font:inherit;font-size:14px;cursor:pointer;text-align:left;width:100%}
 .nav-item:hover{background:var(--sidebar-hover)}
 .nav-item.active{background:var(--pill)}
 .nav-item svg{width:18px;height:18px;opacity:.9;flex-shrink:0}
-.nav-item .kbd{margin-left:auto;font-size:11px;color:var(--faint)}
-.nav-item .dot{width:7px;height:7px;border-radius:50%;background:var(--blue);margin-left:auto}
 .section{padding:14px 14px 6px;display:flex;align-items:center;justify-content:space-between}
 .section span{font-size:12px;color:var(--faint);font-weight:500}
 .section .row{display:flex;gap:4px}
@@ -32,16 +29,7 @@ body{display:flex;overflow:hidden}
 .chat-item{display:block;width:100%;border:0;background:transparent;color:var(--muted);text-align:left;padding:9px 12px;border-radius:10px;font:inherit;font-size:13.5px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chat-item:hover{background:var(--sidebar-hover);color:var(--text)}
 .chat-item.active{background:var(--pill);color:var(--text)}
-.sb-bottom{padding:10px;border-top:1px solid #1a1a1a}
-.user{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;cursor:pointer}
-.user:hover{background:var(--sidebar-hover)}
-.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#444,#222);display:grid;place-items:center;font-size:12px;font-weight:600}
-.user span{font-size:13px;color:var(--muted)}
 .main{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
-.topbar{height:52px;display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:0 20px}
-.top-link{display:flex;align-items:center;gap:8px;background:transparent;border:0;color:var(--text);font:inherit;font-size:13px;cursor:pointer;opacity:.9}
-.top-link .orb{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#888 40%,#333);border:1px solid #333}
-.top-link.private{color:var(--muted)}
 .stage{flex:1;overflow-y:auto;display:flex;flex-direction:column}
 .stage-inner{max-width:720px;width:100%;margin:0 auto;padding:24px 20px 20px;display:flex;flex-direction:column;min-height:100%}
 .empty{margin:auto;width:100%;text-align:center;padding-bottom:40px}
@@ -61,14 +49,6 @@ body{display:flex;overflow:hidden}
 .send-fab{width:34px;height:34px;border-radius:50%;border:0;background:#f4f4f4;color:#111;cursor:pointer;display:grid;place-items:center}
 .send-fab:disabled{opacity:.3;cursor:not-allowed}
 .send-fab.stop{background:#333;color:#fff}
-.promo{margin-top:14px;display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid #262626;border-radius:16px;padding:12px 14px;text-align:left}
-.promo .bot{width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#999 45%,#333);flex-shrink:0}
-.promo .txt{flex:1;min-width:0}
-.promo .txt strong{display:block;font-size:13.5px;font-weight:600}
-.promo .txt span{font-size:12.5px;color:var(--muted)}
-.promo .actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
-.promo .link{background:transparent;border:0;color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
-.promo .upgrade{background:#f2f2f2;color:#111;border:0;border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
 .msgs{display:flex;flex-direction:column;gap:18px;padding-bottom:20px}
 .msg{display:flex;gap:12px;line-height:1.55;font-size:15px}
 .msg .av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px}
