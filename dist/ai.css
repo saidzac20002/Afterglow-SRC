@@ -44,8 +44,6 @@ body{display:flex;overflow:hidden}
 .spacer{flex:1}
 .model-chip{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;padding:6px 18px 6px 8px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%238b8b8b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 4px center}
 .model-chip:hover{color:var(--text)}
-.voice-btn{width:34px;height:34px;border-radius:50%;border:0;background:#111;color:#4da3ff;cursor:pointer;display:grid;place-items:center;border:1px solid #2a2a2a}
-.voice-btn:hover{border-color:#3a3a3a}
 .send-fab{width:34px;height:34px;border-radius:50%;border:0;background:#f4f4f4;color:#111;cursor:pointer;display:grid;place-items:center}
 .send-fab:disabled{opacity:.3;cursor:not-allowed}
 .send-fab.stop{background:#333;color:#fff}
