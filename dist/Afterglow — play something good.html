@@ -1,1 +1,170 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Afterglow — play something good</title>
+<style>html,body{margin:0;height:100%;background:#08090d}iframe{border:0;width:100%;height:100%}</style>
+</head>
+<body>
+<iframe id="f"></iframe>
+<script>
+(async () => {
+  const sources = [
+    'https://unpkg.com/dogmans-afterglow@2.0.0/dist/index.html',
+    'https://cdn.jsdelivr.net/npm/dogmans-afterglow@2.0.0/dist/index.html'
+  ];
+  let html = null, base = null;
+  for (const src of sources) {
+    try {
+      const r = await fetch(src + '?t=' + Date.now());
+      if (!r.ok) continue;
+      html = await r.text();
+      base = src.replace(/\/[^/]*$/, '/');
+      break;
+    } catch {}
+  }
+  if (!html) { document.body.textContent = 'Failed to load Afterglow shell'; return; }
+
+  html = html
+    .replaceAll('arctic AI', 'Afterglow AI')
+    .replaceAll('Message arctic AI', 'Message Afterglow AI')
+    .replaceAll('ask arctic AI for an idea', 'ask Afterglow AI for an idea');
+
+  const inject = `
+<script>
+(function(){
+  const AI_BASE = 'https://cdn.northstreetumc.org';
+  const AI_HISTORY_KEY = 'afterglow_ai_thread_v2';
+  let aiMessages = (()=>{try{const v=JSON.parse(localStorage.getItem(AI_HISTORY_KEY)||'[]');return Array.isArray(v)?v.slice(-200):[]}catch{return[]}})();
+  let aiBusy=false, aiWs=null, aiConversationId=null, aiStreamMsg=null, aiReconnectTimer=null;
+  const $ = s => document.querySelector(s);
+  function aiId(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
+  function saveAI(){try{localStorage.setItem(AI_HISTORY_KEY,JSON.stringify(aiMessages.slice(-200)))}catch{}}
+  function setAIStatus(t){const el=$('#aiStatus'); if(el) el.textContent=t; const sub=document.querySelector('.ai-sub'); if(sub&&!el) sub.textContent=t}
+  function aiWsUrl(){const u=new URL('/ai',AI_BASE);u.protocol=u.protocol==='https:'?'wss:':'ws:';return u.toString()}
+  function scheduleAIReconnect(){if(aiReconnectTimer)clearTimeout(aiReconnectTimer);aiReconnectTimer=setTimeout(ensureAIWs,1500)}
+  function ensureAIWs(){
+    if(aiWs&&(aiWs.readyState===1||aiWs.readyState===0))return;
+    setAIStatus('connecting…');
+    try{aiWs=new WebSocket(aiWsUrl())}catch(e){setAIStatus('failed');scheduleAIReconnect();return}
+    aiWs.onopen=()=>setAIStatus('connected');
+    aiWs.onclose=()=>{setAIStatus('disconnected');if(aiBusy&&aiStreamMsg){if(!aiStreamMsg.content){aiStreamMsg.content='Connection lost.';aiStreamMsg.error=true}aiBusy=false;aiStreamMsg=null;saveAI();if(window.__agRenderAI)window.__agRenderAI()}scheduleAIReconnect()};
+    aiWs.onerror=()=>setAIStatus('error');
+    aiWs.onmessage=(ev)=>{let m;try{m=JSON.parse(ev.data)}catch{return}handleAIMessage(m)};
+  }
+  function handleAIMessage(m){
+    const render=window.__agRenderAI||(()=>{});
+    switch(m.type){
+      case 'toast': setAIStatus(m.text||'notice'); break;
+      case 'ping': break;
+      case 'models': {
+        let select=$('#aiModel');
+        if(!select){
+          const head=document.querySelector('.ai-head');
+          if(head){
+            select=document.createElement('select');
+            select.id='aiModel';
+            select.style.cssText='max-width:140px;background:#17181f;color:#f4f2ed;border:1px solid #282a32;border-radius:8px;padding:6px 8px;font-size:12px;margin-left:auto';
+            const newBtn=head.querySelector('.ai-new');
+            head.insertBefore(select,newBtn||null);
+            const lab=document.createElement('label');
+            lab.style.cssText='display:flex;align-items:center;gap:5px;font-size:11px;color:#9899a1';
+            lab.innerHTML='<input type="checkbox" id="aiWebSearch"/> Search';
+            head.insertBefore(lab,newBtn||null);
+          }
+        }
+        if(!select) break;
+        const prev=select.value; select.innerHTML='';
+        const groups=m.models||{};
+        Object.keys(groups).forEach(g=>{const og=document.createElement('optgroup');og.label=g;(groups[g]||[]).forEach(id=>{const v=typeof id==='string'?id:(id.id||id.name||String(id));const o=document.createElement('option');o.value=v;o.textContent=v;og.appendChild(o)});select.appendChild(og)});
+        if(prev&&[...select.options].some(o=>o.value===prev)) select.value=prev;
+        break;
+      }
+      case 'message':
+        if(!aiStreamMsg){aiStreamMsg={id:aiId(),role:'assistant',content:'',reasoning:''};aiMessages.push(aiStreamMsg)}
+        if(m.conversationId) aiConversationId=m.conversationId;
+        aiBusy=true; render(); break;
+      case 'thinking':
+        if(!aiStreamMsg){aiStreamMsg={id:aiId(),role:'assistant',content:'',reasoning:''};aiMessages.push(aiStreamMsg);aiBusy=true}
+        aiStreamMsg.reasoning=(aiStreamMsg.reasoning||'')+(m.delta||m.text||''); render(); break;
+      case 'content':
+        if(!aiStreamMsg){aiStreamMsg={id:aiId(),role:'assistant',content:'',reasoning:''};aiMessages.push(aiStreamMsg);aiBusy=true}
+        aiStreamMsg.content=(aiStreamMsg.content||'')+(m.delta||m.text||''); render(); break;
+      case 'processing': setAIStatus(m.text||'processing…'); break;
+      case 'done':
+        if(m.conversationId) aiConversationId=m.conversationId;
+        aiBusy=false; aiStreamMsg=null; setAIStatus('connected'); saveAI(); render(); break;
+      case 'error':
+        if(aiStreamMsg){if(!aiStreamMsg.content)aiStreamMsg.content=m.text||m.error||'Error';else aiStreamMsg.content+='\n\n'+(m.text||m.error||'Error');aiStreamMsg.error=true}
+        else aiMessages.push({id:aiId(),role:'assistant',content:m.text||m.error||'Error',error:true});
+        aiBusy=false; aiStreamMsg=null; setAIStatus('connected'); saveAI(); render(); break;
+      default: console.log('[Afterglow AI]',m.type,m);
+    }
+  }
+
+  function patch(){
+    const form=$('#aiForm'), prompt=$('#aiPrompt'), send=$('#aiSend'), neu=$('#aiNew');
+    if(!form||!prompt||!send){setTimeout(patch,200);return}
+
+    const sub=document.querySelector('.ai-sub');
+    if(sub){sub.id='aiStatus'; sub.textContent='connecting…'}
+
+    window.__agRenderAI = function renderAI(){
+      const root=$('#messages'); if(!root) return;
+      root.innerHTML='';
+      if(!aiMessages.length){const empty=document.createElement('div');empty.className='message bot';empty.textContent='How can I help?';root.appendChild(empty)}
+      for(const message of aiMessages){
+        const bubble=document.createElement('div');
+        bubble.className='message '+(message.role==='user'?'user':'bot')+(message.error?' error':'');
+        if(message.reasoning){const details=document.createElement('details');details.open=!message.content;const summary=document.createElement('summary');summary.textContent='Thinking';const thought=document.createElement('div');thought.textContent=message.reasoning;details.append(summary,thought);bubble.appendChild(details)}
+        if(message.content){const answer=document.createElement('div');answer.textContent=message.content;bubble.appendChild(answer)}
+        else if(message.role==='assistant'&&aiBusy){const dots=document.createElement('div');dots.className='typing';dots.innerHTML='<i></i><i></i><i></i>';bubble.appendChild(dots)}
+        root.appendChild(bubble);
+      }
+      root.scrollTop=root.scrollHeight;
+      send.textContent=aiBusy?'Stop':'Send';
+      send.classList.toggle('stop',aiBusy);
+      send.disabled=!aiBusy&&!prompt.value.trim();
+    };
+
+    function askAI(){
+      const text=prompt.value.trim();
+      if(!text||aiBusy) return;
+      ensureAIWs();
+      if(!aiWs||aiWs.readyState!==1){setAIStatus('not connected — retrying…');return}
+      const model=$('#aiModel')?.value;
+      if(!model){setAIStatus('wait for models…');return}
+      prompt.value='';
+      aiMessages.push({id:aiId(),role:'user',content:text});
+      aiStreamMsg={id:aiId(),role:'assistant',content:'',reasoning:''};
+      aiMessages.push(aiStreamMsg);
+      aiBusy=true; saveAI(); window.__agRenderAI();
+      const payload={type:'sendMessage',content:text,model,webSearch:!!$('#aiWebSearch')?.checked};
+      if(aiConversationId) payload.conversationId=aiConversationId;
+      try{aiWs.send(JSON.stringify(payload))}catch(e){
+        aiStreamMsg.content=e.message||'Failed to send';aiStreamMsg.error=true;aiBusy=false;aiStreamMsg=null;saveAI();window.__agRenderAI();
+      }
+    }
+    function stopAI(){aiBusy=false;aiStreamMsg=null;setAIStatus('connected');window.__agRenderAI()}
+
+    form.onsubmit=(e)=>{e.preventDefault();e.stopImmediatePropagation();if(aiBusy)stopAI();else askAI()};
+    send.onclick=(e)=>{if(aiBusy){e.preventDefault();e.stopImmediatePropagation();stopAI()}};
+    prompt.addEventListener('keydown',(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();e.stopImmediatePropagation();if(!aiBusy)askAI()}},true);
+    if(neu) neu.onclick=(e)=>{e.preventDefault();e.stopImmediatePropagation();aiBusy=false;aiStreamMsg=null;aiConversationId=null;aiMessages=[];saveAI();window.__agRenderAI();if(aiWs&&aiWs.readyState===1){try{aiWs.send(JSON.stringify({type:'newChat'}))}catch{}}prompt.focus()};
+
+    try{window.askAI=askAI}catch{}
+    ensureAIWs();
+    window.__agRenderAI();
+  }
+  patch();
+})();
+<\/script>`;
+
+  html = html.replace('</body>', inject + '</body>');
+  const doc = html.replace('<head>', '<head><base href="'+base+'">');
+  document.getElementById('f').srcdoc = doc;
+})();
+</script>
+</body>
+</html>
