@@ -231,7 +231,6 @@ function bindInput(ta,btn){
 bindInput(input,send);bindInput(input2,send2);
 
 $("newChat").onclick=newChat;
-$("promoDismiss").onclick=()=>$("promo").hidden=true;
 function toggleWeb(btn){webOn=!webOn;btn.classList.toggle("active",webOn);$("webSearch").classList.toggle("active",webOn);$("webSearch2").classList.toggle("active",webOn)}
 $("webSearch").onclick=()=>toggleWeb($("webSearch"));
 $("webSearch2").onclick=()=>toggleWeb($("webSearch2"));
