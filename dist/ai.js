@@ -8,8 +8,18 @@ let streaming=false,streamAsst=null,reconnect=null,pendingMedia=null,ssStream=nu
 let webOn=false;
 
 const statusEl=$("status"),recents=$("recents"),empty=$("empty"),thread=$("thread"),msgs=$("msgs");
-const input=$("input"),input2=$("input2"),model=$("model"),model2=$("model2");
+const input=$("input"),input2=$("input2");
 const send=$("send"),send2=$("send2");
+
+const MODES = [
+  { id: "fast", label: "Fast", icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L4 14h7l-1 8 10-12h-7z"/></svg>`, prefer: ["instant", "gemini-3-8-flash", "glm-5.3-flash"] },
+  { id: "build", label: "Build", icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-3 3-2.4-2.4 3-3z"/></svg>`, prefer: ["gpt-5-4", "gpt-5-5", "claude-sonnet-5"] },
+  { id: "auto", label: "Auto", icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>`, prefer: ["grok-4-6", "gpt-5-4", "instant"] },
+  { id: "expert", label: "Expert", icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c.6.6 1 1.5 1 2.4V17h6v-.6c0-.9.4-1.8 1-2.4A7 7 0 0 0 12 2z"/></svg>`, prefer: ["claude-opus-5", "gpt-5-6-sol", "gpt-6-astra"] },
+  { id: "heavy", label: "Heavy", icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`, prefer: ["claude-opus-5", "gpt-6-astra", "deepseek-v4-pro"] },
+];
+let selectedMode = "fast";
+let availableModels = {};
 
 function load(){try{const r=JSON.parse(localStorage.getItem(STORE_KEY)||"[]");return Array.isArray(r)?r:[]}catch{return[]}}
 function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(chats.slice(0,50)))}catch{}}
@@ -29,21 +39,51 @@ function connect(){
 }
 function schedule(){if(reconnect)clearTimeout(reconnect);reconnect=setTimeout(connect,1500)}
 
-function syncModels(select,list,prev){
-  select.innerHTML="";
-  Object.keys(list||{}).forEach(g=>{
-    const og=document.createElement("optgroup");og.label=g;
-    (list[g]||[]).forEach(id=>{
-      const v=typeof id==="string"?id:(id.id||id.name||String(id));
-      const o=document.createElement("option");o.value=v;o.textContent=v;og.appendChild(o);
+function flattenModels(list){
+  const out=[];
+  Object.keys(list||{}).forEach(g=>{(list[g]||[]).forEach(id=>{
+    out.push(typeof id==="string"?id:(id.id||id.name||String(id)));
+  })});
+  return out;
+}
+function pickModelForMode(modeId){
+  const mode=MODES.find(m=>m.id===modeId)||MODES[0];
+  const flat=flattenModels(availableModels);
+  for(const p of mode.prefer){if(flat.includes(p))return p}
+  return flat[0]||"instant";
+}
+function activeModelId(){return pickModelForMode(selectedMode)}
+function renderModeMenus(){
+  [$("modelMenu"),$("modelMenu2")].forEach(menu=>{
+    if(!menu)return;
+    menu.innerHTML="";
+    MODES.forEach(m=>{
+      const b=document.createElement("button");
+      b.type="button";
+      b.className="model-item"+(m.id===selectedMode?" selected":"");
+      b.innerHTML=`<span class="mi-icon">${m.icon}</span><span>${m.label}</span><span class="mi-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 13l4 4L19 7"/></svg></span>`;
+      b.onclick=()=>{selectedMode=m.id;updateModeButtons();closeMenus();};
+      menu.appendChild(b);
     });
-    select.appendChild(og);
   });
-  const prefer=["grok-4-6","gpt-5-4","gpt-5-5","instant"];
-  let chosen=prev;
-  if(!chosen||![...select.options].some(o=>o.value===chosen))
-    chosen=prefer.find(p=>[...select.options].some(o=>o.value===p))||select.options[0]?.value;
-  if(chosen)select.value=chosen;
+}
+function updateModeButtons(){
+  const mode=MODES.find(m=>m.id===selectedMode)||MODES[0];
+  ["", "2"].forEach(s=>{
+    const icon=$("modelBtnIcon"+s), label=$("modelBtnLabel"+s);
+    if(icon)icon.innerHTML=mode.icon;
+    if(label)label.textContent=mode.label;
+  });
+  renderModeMenus();
+}
+function closeMenus(){
+  const a=$("modelMenu"),b=$("modelMenu2");
+  if(a)a.hidden=true;if(b)b.hidden=true;
+}
+function toggleMenu(menu){
+  const other=menu===$("modelMenu")?$("modelMenu2"):$("modelMenu");
+  if(other)other.hidden=true;
+  menu.hidden=!menu.hidden;
 }
 
 function onMsg(m){
@@ -52,8 +92,8 @@ function onMsg(m){
     case"toast":setStatus(m.text||"notice");break;
     case"ping":break;
     case"models":
-      syncModels(model,m.models,model.value);
-      syncModels(model2,m.models,model2.value);
+      availableModels=m.models||{};
+      updateModeButtons();
       break;
     case"message":
       ensure();if(m.conversationId&&cur())cur().conversationId=m.conversationId;
@@ -128,7 +168,7 @@ function render(){
   const stage=$("stage");stage.scrollTop=stage.scrollHeight;
 }
 function activeInput(){return thread.hidden?input:input2}
-function activeModel(){return thread.hidden?model:model2}
+function activeModel(){return {value: activeModelId()}}
 function updSend(){
   [send,send2].forEach(btn=>{
     const ta=btn===send?input:input2;
@@ -144,7 +184,7 @@ function sendText(){
   const text=ta.value.trim();
   if(!text||streaming)return;
   if(!ws||ws.readyState!==1){setStatus("not connected","bad");connect();return}
-  const mod=activeModel().value;
+  const mod=activeModelId();
   if(!mod){setStatus("wait for models…");return}
   let c=cur();if(!c){newChat();c=cur()}
   c.messages.push({role:"user",content:text});
@@ -172,7 +212,7 @@ function fileToBase64(file){
 }
 async function sendMedia(file,prompt,previewUrl){
   if(!ws||ws.readyState!==1)throw new Error("not connected");
-  const mod=activeModel().value;if(!mod)throw new Error("wait for models");
+  const mod=activeModelId();if(!mod)throw new Error("wait for models");
   let c=cur();if(!c){newChat();c=cur()}
   c.messages.push({role:"user",content:prompt||"",imageUrl:previewUrl||undefined});
   if(!c.title)c.title=(prompt||"Image").slice(0,48);
@@ -243,8 +283,10 @@ $("fileInput").onchange=async()=>{
   if(!f||streaming)return;
   try{await sendMedia(f,activeInput().value.trim()||"Describe this image.",URL.createObjectURL(f));activeInput().value=""}catch(e){setStatus(e.message||"upload failed","bad")}
 };
-model.onchange=()=>{model2.value=model.value};
-model2.onchange=()=>{model.value=model2.value};
+$("modelBtn").onclick=(e)=>{e.stopPropagation();toggleMenu($("modelMenu"))};
+$("modelBtn2").onclick=(e)=>{e.stopPropagation();toggleMenu($("modelMenu2"))};
+document.addEventListener("click",()=>closeMenus());
+updateModeButtons();
 
 if(!currentId)newChat();else{renderRecents();render()}
 updSend();connect();input.focus();
