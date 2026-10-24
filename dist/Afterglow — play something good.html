@@ -10,10 +10,7 @@
 <iframe id="f"></iframe>
 <script>
 (async () => {
-  const sources = [
-    'https://unpkg.com/dogmans-afterglow@2.0.0/dist/index.html',
-    'https://cdn.jsdelivr.net/npm/dogmans-afterglow@2.0.0/dist/index.html'
-  ];
+  const sources = [new URL('./afterglow.html', location.href).href];
   let html = null, base = null;
   for (const src of sources) {
     try {
@@ -96,7 +93,7 @@
         if(m.conversationId) aiConversationId=m.conversationId;
         aiBusy=false; aiStreamMsg=null; setAIStatus('connected'); saveAI(); render(); break;
       case 'error':
-        if(aiStreamMsg){if(!aiStreamMsg.content)aiStreamMsg.content=m.text||m.error||'Error';else aiStreamMsg.content+='\n\n'+(m.text||m.error||'Error');aiStreamMsg.error=true}
+        if(aiStreamMsg){if(!aiStreamMsg.content)aiStreamMsg.content=m.text||m.error||'Error';else aiStreamMsg.content+='\\n\\n'+(m.text||m.error||'Error');aiStreamMsg.error=true}
         else aiMessages.push({id:aiId(),role:'assistant',content:m.text||m.error||'Error',error:true});
         aiBusy=false; aiStreamMsg=null; setAIStatus('connected'); saveAI(); render(); break;
       default: console.log('[Afterglow AI]',m.type,m);
@@ -161,7 +158,14 @@
 })();
 <\/script>`;
 
-  html = html.replace('</body>', inject + '</body>');
+  // The bundled JavaScript also contains HTML strings with </body> tags.
+  // Insert at the document's final closing body tag, outside the bundle.
+  const bodyEnd = html.toLowerCase().lastIndexOf('</body>');
+  if (bodyEnd === -1) {
+    document.body.textContent = 'Failed to load Afterglow shell: missing document body';
+    return;
+  }
+  html = html.slice(0, bodyEnd) + inject + html.slice(bodyEnd);
   const doc = html.replace('<head>', '<head><base href="'+base+'">');
   document.getElementById('f').srcdoc = doc;
 })();
